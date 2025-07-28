@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>축썰닷컴</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <header class="header">
+        <div class="container">
+            <h1 class="logo">⚽ 축썰닷컴</h1>
+            <div class="header-controls">
+                <nav class="nav">
+                    <button class="nav-btn active" data-tab="home">홈</button>
+                    <button class="nav-btn" data-tab="create">포스트 작성</button>
+                    <button class="nav-btn" data-tab="profile">프로필</button>
+                </nav>
+                <button class="theme-toggle" id="theme-toggle" title="다크모드 토글">
+                    🌙
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="main">
+        <div class="container">
+            <!-- 홈 탭 -->
+            <div id="home-tab" class="tab-content active">
+                <div class="search-section">
+                    <input type="text" id="search-input" placeholder="선수 이름으로 검색..." class="search-input">
+                    <button id="search-btn" class="search-btn">검색</button>
+                </div>
+
+                <div class="filter-section">
+                    <select id="sort-select" class="sort-select">
+                        <option value="newest">최신순</option>
+                        <option value="oldest">오래된순</option>
+                        <option value="most-comments">댓글 많은순</option>
+                        <option value="most-likes">좋아요 많은순</option>
+                    </select>
+                    <div class="tag-filter">
+                        <select id="tag-filter" class="tag-select">
+                            <option value="">모든 태그</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div id="posts-container" class="posts-container">
+                    <!-- 포스트들이 여기에 동적으로 추가됩니다 -->
+                </div>
+            </div>
+
+            <!-- 포스트 작성 탭 -->
+            <div id="create-tab" class="tab-content">
+                <div class="create-post-form">
+                    <h2>새 포스트 작성</h2>
+                    <form id="post-form">
+                        <div class="form-group">
+                            <label for="player-name">선수 이름</label>
+                            <input type="text" id="player-name" required placeholder="예: 손흥민">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="post-title">제목</label>
+                            <input type="text" id="post-title" required placeholder="포스트 제목을 입력하세요">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="post-content">내용</label>
+                            <textarea id="post-content" required placeholder="선수에 대한 생각이나 의견을 자유롭게 작성해주세요..."></textarea>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="post-image">이미지 (선택사항)</label>
+                            <input type="file" id="post-image" accept="image/*">
+                            <div id="image-preview" class="image-preview"></div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="post-tags">태그 (쉼표로 구분)</label>
+                            <input type="text" id="post-tags" placeholder="예: 프리미어리그, 토트넘, 윙어">
+                            <div class="tag-suggestions" id="tag-suggestions"></div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="author-name">작성자</label>
+                            <input type="text" id="author-name" required placeholder="닉네임을 입력하세요">
+                        </div>
+                        
+                        <button type="submit" class="submit-btn">포스트 작성</button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- 프로필 탭 -->
+            <div id="profile-tab" class="tab-content">
+                <div class="profile-section">
+                    <h2>사용자 프로필</h2>
+                    <div class="profile-form">
+                        <div class="form-group">
+                            <label for="profile-nickname">닉네임</label>
+                            <input type="text" id="profile-nickname" placeholder="닉네임을 입력하세요">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="profile-avatar">프로필 이미지</label>
+                            <input type="file" id="profile-avatar" accept="image/*">
+                            <div id="avatar-preview" class="avatar-preview"></div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="profile-bio">자기소개</label>
+                            <textarea id="profile-bio" placeholder="간단한 자기소개를 작성해주세요..."></textarea>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="favorite-team">좋아하는 팀</label>
+                            <input type="text" id="favorite-team" placeholder="예: 토트넘 홋스퍼">
+                        </div>
+                        
+                        <button type="button" id="save-profile" class="submit-btn">프로필 저장</button>
+                    </div>
+                    
+                    <div class="profile-stats">
+                        <h3>활동 통계</h3>
+                        <div class="stats-grid">
+                            <div class="stat-item">
+                                <span class="stat-number" id="user-posts-count">0</span>
+                                <span class="stat-label">작성한 포스트</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-number" id="user-comments-count">0</span>
+                                <span class="stat-label">작성한 댓글</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-number" id="user-likes-received">0</span>
+                                <span class="stat-label">받은 좋아요</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- 포스트 상세 모달 -->
+    <div id="post-modal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <div id="modal-body">
+                <!-- 포스트 상세 내용이 여기에 표시됩니다 -->
+            </div>
+        </div>
+    </div>
+
+    <!-- 알림 토스트 -->
+    <div id="toast" class="toast">
+        <span id="toast-message"></span>
+    </div>
+
+    <script src="js/script.js"></script>
+</body>
+</html> 
