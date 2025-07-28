@@ -40,24 +40,37 @@ const profileElements = {
     likesReceived: document.getElementById('user-likes-received')
 };
 
-// 초기화
-document.addEventListener('DOMContentLoaded', function() {
-    initializeApp();
+// Firebase + Cloudinary 실시간 커뮤니티 앱 초기화
+let app = null;
+
+document.addEventListener('DOMContentLoaded', async function() {
+    // Firebase와 필요한 클래스들이 로드될 때까지 대기
+    await waitForDependencies();
+    
+    // Firebase 실시간 앱 인스턴스 생성
+    app = new PlayerCommunityApp();
+    
+    // 이벤트 리스너 설정
+    setupEventListeners();
+    
+    // 다크모드 로드
+    loadTheme();
+    
+    console.log('🎉 실시간 커뮤니티 앱 초기화 완료!');
 });
 
-function initializeApp() {
-    // 샘플 데이터 추가 (처음 방문시에만)
-    if (posts.length === 0) {
-        addSamplePosts();
-    }
-    
-    setupEventListeners();
-    displayPosts();
-    loadTheme();
-    loadProfile();
-    updateTagFilter();
-    updateUserStats();
-    setupTagSuggestions();
+// 모든 의존성 로드 대기
+function waitForDependencies() {
+    return new Promise((resolve) => {
+        const checkDependencies = () => {
+            if (window.database && window.PlayerCommunityApp && window.CloudinaryImageStorage) {
+                resolve();
+            } else {
+                setTimeout(checkDependencies, 100);
+            }
+        };
+        checkDependencies();
+    });
 }
 
 function addSamplePosts() {
@@ -186,6 +199,7 @@ function switchTab(tabName) {
     });
 }
 
+// Firebase 실시간 포스트 작성 처리
 async function handlePostSubmit(e) {
     e.preventDefault();
     
@@ -194,63 +208,35 @@ async function handlePostSubmit(e) {
     const content = document.getElementById('post-content').value.trim();
     const author = document.getElementById('author-name').value.trim();
     const tagsInput = document.getElementById('post-tags').value.trim();
+    const imageFile = document.getElementById('post-image').files[0];
     
     if (!playerName || !title || !content || !author) {
-        showToast('모든 필드를 입력해주세요!');
+        if (app && app.showToast) {
+            app.showToast('모든 필수 필드를 입력해주세요!');
+        } else {
+            alert('모든 필수 필드를 입력해주세요!');
+        }
         return;
     }
     
     // 태그 처리
     const tags = tagsInput ? tagsInput.split(',').map(tag => tag.trim()).filter(tag => tag) : [];
     
-    // 이미지 처리 - Cloudinary 사용
-    let imageUrl = '';
-    const imageFile = document.getElementById('post-image').files[0];
-    
-    if (imageFile) {
-        try {
-            showToast('이미지를 업로드하는 중...');
-            const storage = new CloudinaryImageStorage();
-            imageUrl = await storage.uploadImage(imageFile);
-            showToast('이미지 업로드 완료!');
-        } catch (error) {
-            console.error('Image upload failed:', error);
-            showToast(`이미지 업로드 실패: ${error.message}`);
-            return;
-        }
-    }
-    
-    const newPost = {
-        id: generateId(),
+    const postData = {
         playerName,
         title,
         content,
         author,
-        date: new Date().toISOString(),
-        image: imageUrl,
-        tags,
-        likes: 0,
-        dislikes: 0,
-        likedBy: [],
-        dislikedBy: [],
-        comments: []
+        tags
     };
     
-    posts.unshift(newPost); // 최신 포스트를 맨 앞에 추가
-    localStorage.setItem('posts', JSON.stringify(posts));
-    
-    // 폼 리셋
-    postForm.reset();
-    imagePreview.style.display = 'none';
-    imagePreview.innerHTML = '';
-    
-    // 홈 탭으로 이동
-    switchTab('home');
-    displayPosts();
-    updateTagFilter();
-    updateUserStats();
-    
-    showToast('포스트가 성공적으로 작성되었습니다!');
+    // Firebase + Cloudinary를 통한 실시간 포스트 생성
+    if (app && app.createPost) {
+        await app.createPost(postData, imageFile);
+    } else {
+        console.error('Firebase 앱이 초기화되지 않았습니다.');
+        alert('시스템 초기화 중입니다. 잠시 후 다시 시도해주세요.');
+    }
 }
 
 function displayPosts(postsToShow = posts) {
@@ -524,57 +510,21 @@ document.addEventListener('visibilitychange', function() {
 
 // 새로운 기능들
 
-// 좋아요/싫어요 기능
+// Firebase 실시간 좋아요/싫어요 기능
 function toggleLike(postId) {
-    const post = posts.find(p => p.id === postId);
-    const currentUser = getCurrentUser();
-    
-    if (!post) return;
-    
-    // 싫어요가 눌러져 있다면 제거
-    if (post.dislikedBy.includes(currentUser)) {
-        post.dislikedBy = post.dislikedBy.filter(user => user !== currentUser);
-        post.dislikes = Math.max(0, (post.dislikes || 0) - 1);
-    }
-    
-    // 좋아요 토글
-    if (post.likedBy.includes(currentUser)) {
-        post.likedBy = post.likedBy.filter(user => user !== currentUser);
-        post.likes = Math.max(0, (post.likes || 0) - 1);
+    if (app && app.toggleLike) {
+        app.toggleLike(postId, true);
     } else {
-        post.likedBy.push(currentUser);
-        post.likes = (post.likes || 0) + 1;
+        console.error('Firebase 앱이 초기화되지 않았습니다.');
     }
-    
-    localStorage.setItem('posts', JSON.stringify(posts));
-    displayPosts();
-    updateUserStats();
 }
 
 function toggleDislike(postId) {
-    const post = posts.find(p => p.id === postId);
-    const currentUser = getCurrentUser();
-    
-    if (!post) return;
-    
-    // 좋아요가 눌러져 있다면 제거
-    if (post.likedBy.includes(currentUser)) {
-        post.likedBy = post.likedBy.filter(user => user !== currentUser);
-        post.likes = Math.max(0, (post.likes || 0) - 1);
-    }
-    
-    // 싫어요 토글
-    if (post.dislikedBy.includes(currentUser)) {
-        post.dislikedBy = post.dislikedBy.filter(user => user !== currentUser);
-        post.dislikes = Math.max(0, (post.dislikes || 0) - 1);
+    if (app && app.toggleLike) {
+        app.toggleLike(postId, false);
     } else {
-        post.dislikedBy.push(currentUser);
-        post.dislikes = (post.dislikes || 0) + 1;
+        console.error('Firebase 앱이 초기화되지 않았습니다.');
     }
-    
-    localStorage.setItem('posts', JSON.stringify(posts));
-    displayPosts();
-    updateUserStats();
 }
 
 function getCurrentUser() {

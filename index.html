@@ -160,7 +160,31 @@
         <span id="toast-message"></span>
     </div>
 
+    <!-- Firebase SDK -->
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+        import { getDatabase } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js';
+        
+        // Firebase 설정 (실제 프로젝트 설정으로 교체 필요)
+        const firebaseConfig = {
+            apiKey: "YOUR_API_KEY",
+            authDomain: "chukssul-community.firebaseapp.com",
+            databaseURL: "https://chukssul-community-default-rtdb.asia-southeast1.firebasedatabase.app/",
+            projectId: "chukssul-community",
+            storageBucket: "chukssul-community.appspot.com",
+            messagingSenderId: "123456789",
+            appId: "YOUR_APP_ID"
+        };
+        
+        // Firebase 초기화
+        const app = initializeApp(firebaseConfig);
+        window.database = getDatabase(app);
+        
+        console.log('🔥 Firebase 초기화 완료!');
+    </script>
+    
     <script src="js/cloudinary-storage.js"></script>
+    <script type="module" src="js/firebase-realtime.js"></script>
     <script src="js/script.js"></script>
 </body>
 </html> 
