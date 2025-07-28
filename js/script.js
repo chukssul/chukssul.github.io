@@ -53,10 +53,11 @@ document.addEventListener('DOMContentLoaded', async function() {
     // 프로필 로드
     loadProfile();
     
-    // 샘플 포스트가 없으면 추가
-    // if (posts.length === 0) {
-    //     addSamplePosts();
-    // }
+    // 기존 포스트 완전 초기화 (샘플 포스트 제거)
+    posts = [];
+    localStorage.removeItem('posts');
+    localStorage.setItem('posts', JSON.stringify(posts));
+    console.log('✅ 모든 기존 포스트가 제거되었습니다. 깨끗한 상태로 시작합니다.');
     
     // 포스트 표시
     displayPosts();
@@ -64,15 +65,15 @@ document.addEventListener('DOMContentLoaded', async function() {
     // 태그 필터 업데이트
     updateTagFilter();
     
-    // 프로필 통계 업데이트
+        // 프로필 통계 업데이트
     updateUserStats();
     
-    // 로고 클릭 시 홈 탭 이동
+    // 로고 클릭 시 홈으로 이동 (샘플 페이지가 아닌 정상 홈)
     const mainLogo = document.getElementById('main-logo');
     if (mainLogo) {
-        // 클릭 이벤트 추가
         mainLogo.addEventListener('click', function(e) {
             e.preventDefault();
+            // 홈 탭으로 이동
             switchTab('home');
             
             // 스크롤을 맨 위로 이동
@@ -80,16 +81,13 @@ document.addEventListener('DOMContentLoaded', async function() {
                 top: 0,
                 behavior: 'smooth'
             });
-            
-            // 피드백 효과
-            showToast('홈으로 이동했습니다!');
         });
         
-        console.log('✅ 로고 클릭 이벤트가 등록되었습니다.');
-    } else {
-        console.error('❌ 로고 요소를 찾을 수 없습니다.');
+        // 로고에 클릭 가능한 스타일 추가
+        mainLogo.style.cursor = 'pointer';
+        console.log('✅ 로고 홈 이동 기능이 설정되었습니다.');
     }
-
+    
     // Firebase 기능을 백그라운드에서 초기화
     try {
         await waitForDependencies();
