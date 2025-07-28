@@ -44,30 +44,63 @@ const profileElements = {
 let app = null;
 
 document.addEventListener('DOMContentLoaded', async function() {
-    // Firebase와 필요한 클래스들이 로드될 때까지 대기
-    await waitForDependencies();
-    
-    // Firebase 실시간 앱 인스턴스 생성
-    app = new PlayerCommunityApp();
-    
-    // 이벤트 리스너 설정
+    // 이벤트 리스너 설정 (Firebase 의존하지 않는 기본 기능)
     setupEventListeners();
     
     // 다크모드 로드
     loadTheme();
     
+    // 프로필 로드
+    loadProfile();
+    
+    // 샘플 포스트가 없으면 추가
+    if (posts.length === 0) {
+        addSamplePosts();
+    }
+    
+    // 포스트 표시
+    displayPosts();
+    
+    // 태그 필터 업데이트
+    updateTagFilter();
+    
+    // 프로필 통계 업데이트
+    updateUserStats();
+    
     // 로고 클릭 시 홈 탭 이동
     const mainLogo = document.getElementById('main-logo');
     if (mainLogo) {
-        mainLogo.style.cursor = 'pointer';
-        mainLogo.addEventListener('click', () => {
-            if (app && app.switchTab) {
-                app.switchTab('home');
-            }
+        // 클릭 이벤트 추가
+        mainLogo.addEventListener('click', function(e) {
+            e.preventDefault();
+            switchTab('home');
+            
+            // 스크롤을 맨 위로 이동
+            window.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
+            
+            // 피드백 효과
+            showToast('홈으로 이동했습니다!');
         });
+        
+        console.log('✅ 로고 클릭 이벤트가 등록되었습니다.');
+    } else {
+        console.error('❌ 로고 요소를 찾을 수 없습니다.');
     }
 
-    console.log('🎉 실시간 커뮤니티 앱 초기화 완료!');
+    // Firebase 기능을 백그라운드에서 초기화
+    try {
+        await waitForDependencies();
+        app = new PlayerCommunityApp();
+        window.app = app; // window에 app 인스턴스 명시적으로 할당
+        console.log('🎉 Firebase 실시간 기능 초기화 완료!');
+    } catch (error) {
+        console.warn('⚠️ Firebase 초기화 실패 - 기본 기능만 사용 가능:', error);
+    }
+
+    console.log('✅ 앱 초기화 완료!');
 });
 
 // 모든 의존성 로드 대기
@@ -208,9 +241,25 @@ function switchTab(tabName) {
     tabContents.forEach(content => {
         content.classList.toggle('active', content.id === `${tabName}-tab`);
     });
+    
+    // 홈 탭으로 이동할 때 검색과 필터 초기화
+    if (tabName === 'home') {
+        // 검색 초기화
+        if (searchInput) searchInput.value = '';
+        
+        // 정렬 초기화 (최신순)
+        if (sortSelect) sortSelect.value = 'newest';
+        
+        // 태그 필터 초기화
+        if (tagFilter) tagFilter.value = '';
+        
+        // 포스트 다시 표시 (모든 포스트, 최신순)
+        const sortedPosts = [...posts].sort((a, b) => new Date(b.date) - new Date(a.date));
+        displayPosts(sortedPosts);
+    }
 }
 
-// Firebase 실시간 포스트 작성 처리
+// 포스트 작성 처리
 async function handlePostSubmit(e) {
     e.preventDefault();
     
@@ -222,31 +271,84 @@ async function handlePostSubmit(e) {
     const imageFile = document.getElementById('post-image').files[0];
     
     if (!playerName || !title || !content || !author) {
-        if (app && app.showToast) {
-            app.showToast('모든 필수 필드를 입력해주세요!');
-        } else {
-            alert('모든 필수 필드를 입력해주세요!');
-        }
+        showToast('모든 필수 필드를 입력해주세요!');
         return;
     }
     
-    // 태그 처리
-    const tags = tagsInput ? tagsInput.split(',').map(tag => tag.trim()).filter(tag => tag) : [];
+    // 버튼 로딩 상태
+    const submitBtn = document.getElementById('submit-btn');
+    submitBtn.classList.add('loading');
+    submitBtn.disabled = true;
     
-    const postData = {
-        playerName,
-        title,
-        content,
-        author,
-        tags
-    };
-    
-    // Firebase + Cloudinary를 통한 실시간 포스트 생성
-    if (app && app.createPost) {
-        await app.createPost(postData, imageFile);
-    } else {
-        console.error('Firebase 앱이 초기화되지 않았습니다.');
-        alert('시스템 초기화 중입니다. 잠시 후 다시 시도해주세요.');
+    try {
+        // 태그 처리
+        const tags = tagsInput ? tagsInput.split(',').map(tag => tag.trim()).filter(tag => tag) : [];
+        
+        // 이미지 처리
+        let imageUrl = '';
+        if (imageFile) {
+            // 간단한 로컬 이미지 처리 (실제로는 Cloudinary 사용)
+            imageUrl = URL.createObjectURL(imageFile);
+        }
+        
+        // 새 포스트 생성
+        const newPost = {
+            id: generateId(),
+            playerName,
+            title,
+            content,
+            author,
+            tags,
+            image: imageUrl,
+            date: new Date().toISOString(),
+            likes: 0,
+            dislikes: 0,
+            likedBy: [],
+            dislikedBy: [],
+            comments: []
+        };
+        
+        // 포스트 추가
+        posts.unshift(newPost); // 맨 앞에 추가
+        localStorage.setItem('posts', JSON.stringify(posts));
+        
+        // 포스트 목록 새로고침
+        displayPosts();
+        updateTagFilter();
+        updateUserStats();
+        
+        // 폼 초기화
+        postForm.reset();
+        imagePreview.style.display = 'none';
+        tagSuggestions.innerHTML = '';
+        
+        // 홈 탭으로 이동
+        switchTab('home');
+        
+        showToast('포스트가 성공적으로 작성되었습니다!');
+        
+        // Firebase + Cloudinary를 통한 실시간 포스트 업로드 (백그라운드)
+        if (app && app.createPost) {
+            try {
+                await app.createPost({
+                    playerName,
+                    title,
+                    content,
+                    author,
+                    tags
+                }, imageFile);
+            } catch (error) {
+                console.warn('Firebase 동기화 실패:', error);
+            }
+        }
+        
+    } catch (error) {
+        console.error('포스트 작성 오류:', error);
+        showToast('포스트 작성 중 오류가 발생했습니다. 다시 시도해주세요.');
+    } finally {
+        // 버튼 로딩 상태 해제
+        submitBtn.classList.remove('loading');
+        submitBtn.disabled = false;
     }
 }
 
@@ -521,20 +623,66 @@ document.addEventListener('visibilitychange', function() {
 
 // 새로운 기능들
 
-// Firebase 실시간 좋아요/싫어요 기능
+// 좋아요/싫어요 기능
 function toggleLike(postId) {
+    const post = posts.find(p => p.id === postId);
+    if (!post) return;
+    
+    const currentUser = getCurrentUser();
+    
+    // 이미 좋아요를 누른 경우
+    if (post.likedBy.includes(currentUser)) {
+        post.likedBy = post.likedBy.filter(user => user !== currentUser);
+        post.likes = Math.max(0, (post.likes || 0) - 1);
+    } else {
+        // 싫어요를 누른 상태라면 싫어요 취소
+        if (post.dislikedBy.includes(currentUser)) {
+            post.dislikedBy = post.dislikedBy.filter(user => user !== currentUser);
+            post.dislikes = Math.max(0, (post.dislikes || 0) - 1);
+        }
+        
+        // 좋아요 추가
+        post.likedBy.push(currentUser);
+        post.likes = (post.likes || 0) + 1;
+    }
+    
+    localStorage.setItem('posts', JSON.stringify(posts));
+    displayPosts();
+    
+    // Firebase 앱이 있다면 동기화
     if (app && app.toggleLike) {
         app.toggleLike(postId, true);
-    } else {
-        console.error('Firebase 앱이 초기화되지 않았습니다.');
     }
 }
 
 function toggleDislike(postId) {
+    const post = posts.find(p => p.id === postId);
+    if (!post) return;
+    
+    const currentUser = getCurrentUser();
+    
+    // 이미 싫어요를 누른 경우
+    if (post.dislikedBy.includes(currentUser)) {
+        post.dislikedBy = post.dislikedBy.filter(user => user !== currentUser);
+        post.dislikes = Math.max(0, (post.dislikes || 0) - 1);
+    } else {
+        // 좋아요를 누른 상태라면 좋아요 취소
+        if (post.likedBy.includes(currentUser)) {
+            post.likedBy = post.likedBy.filter(user => user !== currentUser);
+            post.likes = Math.max(0, (post.likes || 0) - 1);
+        }
+        
+        // 싫어요 추가
+        post.dislikedBy.push(currentUser);
+        post.dislikes = (post.dislikes || 0) + 1;
+    }
+    
+    localStorage.setItem('posts', JSON.stringify(posts));
+    displayPosts();
+    
+    // Firebase 앱이 있다면 동기화
     if (app && app.toggleLike) {
         app.toggleLike(postId, false);
-    } else {
-        console.error('Firebase 앱이 초기화되지 않았습니다.');
     }
 }
 
