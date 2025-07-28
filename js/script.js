@@ -186,7 +186,7 @@ function switchTab(tabName) {
     });
 }
 
-function handlePostSubmit(e) {
+async function handlePostSubmit(e) {
     e.preventDefault();
     
     const playerName = document.getElementById('player-name').value.trim();
@@ -203,8 +203,27 @@ function handlePostSubmit(e) {
     // 태그 처리
     const tags = tagsInput ? tagsInput.split(',').map(tag => tag.trim()).filter(tag => tag) : [];
     
-    // 이미지 처리
-    const imageData = imagePreview.querySelector('img') ? imagePreview.querySelector('img').src : '';
+    // 이미지 처리 - GitHub Storage 사용
+    let imageUrl = '';
+    const imageFile = document.getElementById('post-image').files[0];
+    
+    if (imageFile) {
+        try {
+            if (!window.GitHubImageStorage || !GitHubImageStorage.prototype.token) {
+                showToast('GitHub 토큰이 설정되지 않았습니다. 콘솔에서 setGitHubToken("YOUR_TOKEN")을 실행하세요.');
+                return;
+            }
+            
+            showToast('이미지를 업로드하는 중...');
+            const storage = new GitHubImageStorage();
+            imageUrl = await storage.uploadImage(imageFile);
+            showToast('이미지 업로드 완료!');
+        } catch (error) {
+            console.error('Image upload failed:', error);
+            showToast(`이미지 업로드 실패: ${error.message}`);
+            return;
+        }
+    }
     
     const newPost = {
         id: generateId(),
@@ -213,7 +232,7 @@ function handlePostSubmit(e) {
         content,
         author,
         date: new Date().toISOString(),
-        image: imageData,
+        image: imageUrl,
         tags,
         likes: 0,
         dislikes: 0,
@@ -586,10 +605,20 @@ function loadTheme() {
 // 이미지 업로드 기능
 function handleImageUpload(e) {
     const file = e.target.files[0];
-    if (!file) return;
+    if (!file) {
+        imagePreview.style.display = 'none';
+        return;
+    }
     
-    if (file.size > 5 * 1024 * 1024) { // 5MB 제한
-        showToast('이미지 크기는 5MB 이하여야 합니다.');
+    // GitHub Storage 파일 유효성 검증
+    try {
+        if (window.GitHubImageStorage) {
+            const storage = new GitHubImageStorage();
+            storage.validateFile(file);
+        }
+    } catch (error) {
+        showToast(error.message);
+        e.target.value = '';
         return;
     }
     
@@ -721,4 +750,28 @@ function updateUserStats() {
     // 받은 좋아요 수
     const likesReceived = userPosts.reduce((total, post) => total + (post.likes || 0), 0);
     profileElements.likesReceived.textContent = likesReceived;
-} 
+}
+
+// GitHub Token 설정 함수
+function setGitHubToken(token) {
+    if (window.GitHubImageStorage) {
+        GitHubImageStorage.prototype.token = token;
+        console.log('✅ GitHub token이 설정되었습니다!');
+        showToast('GitHub 토큰이 설정되었습니다. 이제 이미지 업로드가 가능합니다!');
+    } else {
+        console.error('❌ GitHubImageStorage가 로드되지 않았습니다.');
+    }
+}
+
+// 토큰 설정 안내 (페이지 로드 시)
+setTimeout(() => {
+    console.log('🔑 GitHub Token 설정이 필요합니다!');
+    console.log('브라우저 콘솔에서 다음 명령어를 실행하세요:');
+    console.log('setGitHubToken("YOUR_GITHUB_TOKEN")');
+    console.log('');
+    console.log('📋 설정 방법:');
+    console.log('1. GitHub → Settings → Developer settings → Personal access tokens');
+    console.log('2. "Generate new token (classic)" 클릭');
+    console.log('3. repo 권한 선택 후 토큰 생성');
+    console.log('4. 생성된 토큰을 위 명령어에 입력');
+}, 1000); 
