@@ -54,9 +54,9 @@ document.addEventListener('DOMContentLoaded', async function() {
     loadProfile();
     
     // 샘플 포스트가 없으면 추가
-    if (posts.length === 0) {
-        addSamplePosts();
-    }
+    // if (posts.length === 0) {
+    //     addSamplePosts();
+    // }
     
     // 포스트 표시
     displayPosts();
@@ -115,79 +115,6 @@ function waitForDependencies() {
         };
         checkDependencies();
     });
-}
-
-function addSamplePosts() {
-    const samplePosts = [
-        {
-            id: generateId(),
-            playerName: '손흥민',
-            title: '손흥민의 최근 경기력에 대해',
-            content: '최근 손흥민 선수의 경기력이 정말 인상적입니다. 특히 지난 경기에서 보여준 플레이메이킹 능력과 골 결정력이 뛰어났다고 생각해요. 여러분은 어떻게 생각하시나요?',
-            author: '축구팬123',
-            date: new Date(Date.now() - 86400000).toISOString(), // 1일 전
-            image: '',
-            tags: ['프리미어리그', '토트넘', '한국축구'],
-            likes: 15,
-            dislikes: 2,
-            likedBy: [],
-            dislikedBy: [],
-            comments: [
-                {
-                    id: generateId(),
-                    author: '토트넘러버',
-                    content: '정말 동감합니다! 손흥민은 언제나 기대를 저버리지 않는 선수예요.',
-                    date: new Date(Date.now() - 43200000).toISOString() // 12시간 전
-                }
-            ]
-        },
-        {
-            id: generateId(),
-            playerName: '메시',
-            title: '메시의 인터 마이애미 활약상',
-            content: 'MLS에서의 메시 활약이 정말 대단하네요. 나이가 많음에도 불구하고 여전히 월드클래스의 실력을 보여주고 있습니다.',
-            author: '메시팬',
-            date: new Date(Date.now() - 172800000).toISOString(), // 2일 전
-            image: '',
-            tags: ['MLS', '바르셀로나', '아르헨티나'],
-            likes: 8,
-            dislikes: 0,
-            likedBy: [],
-            dislikedBy: [],
-            comments: []
-        },
-        {
-            id: generateId(),
-            playerName: '김민재',
-            title: '김민재 바이에른 뮌헨 적응기',
-            content: '김민재 선수가 바이에른 뮌헨에서 잘 적응하고 있는 것 같아서 기쁩니다. 분데스리가에서의 활약을 기대해봅니다!',
-            author: '한국축구사랑',
-            date: new Date(Date.now() - 259200000).toISOString(), // 3일 전
-            image: '',
-            tags: ['분데스리가', '바이에른뮌헨', '한국축구'],
-            likes: 23,
-            dislikes: 1,
-            likedBy: [],
-            dislikedBy: [],
-            comments: [
-                {
-                    id: generateId(),
-                    author: '뮌헨팬',
-                    content: '김민재 정말 든든한 수비수예요. 팀에 꼭 필요한 선수입니다.',
-                    date: new Date(Date.now() - 216000000).toISOString()
-                },
-                {
-                    id: generateId(),
-                    author: '축구매니아',
-                    content: '한국 선수가 바이에른에서 활약하는 모습이 정말 자랑스럽네요!',
-                    date: new Date(Date.now() - 180000000).toISOString()
-                }
-            ]
-        }
-    ];
-    
-    posts = samplePosts;
-    localStorage.setItem('posts', JSON.stringify(posts));
 }
 
 function setupEventListeners() {
