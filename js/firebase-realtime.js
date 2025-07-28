@@ -48,7 +48,10 @@ class PlayerCommunityApp {
         // 온라인 사용자 수 실시간 업데이트
         const onlineRef = ref(this.database, 'online');
         onValue(onlineRef, (snapshot) => {
-            const onlineCount = snapshot.numChildren();
+            let onlineCount = 0;
+            if (snapshot.exists() && typeof snapshot.numChildren === 'function') {
+                onlineCount = snapshot.numChildren();
+            }
             const onlineCountElement = document.getElementById('online-count');
             if (onlineCountElement) {
                 onlineCountElement.textContent = `접속자 수: ${onlineCount}명`;
@@ -231,6 +234,7 @@ class PlayerCommunityApp {
 
     // 포스트 표시
     displayPosts(posts) {
+        this.lastPosts = posts;
         const container = document.getElementById('posts-container');
         
         if (!posts || posts.length === 0) {
@@ -246,6 +250,7 @@ class PlayerCommunityApp {
         const userLiked = post.likedBy && post.likedBy[this.currentUser];
         const userDisliked = post.dislikedBy && post.dislikedBy[this.currentUser];
         const commentCount = post.comments ? Object.keys(post.comments).length : 0;
+        const isOwner = post.userId === this.currentUser;
 
         return `
             <div class="post-card new-post" onclick="openPostModal('${post.id}')">
@@ -264,17 +269,86 @@ class PlayerCommunityApp {
                 <div class="post-footer">
                     <span class="post-author">작성자: ${this.escapeHtml(post.author)}</span>
                     <div class="post-actions">
-                        <button class="like-btn ${userLiked ? 'active' : ''}" onclick="event.stopPropagation(); app.toggleLike('${post.id}', true)">
-                            👍 ${post.likes || 0}
-                        </button>
-                        <button class="dislike-btn ${userDisliked ? 'active' : ''}" onclick="event.stopPropagation(); app.toggleLike('${post.id}', false)">
-                            👎 ${post.dislikes || 0}
-                        </button>
+                        <button class="like-btn ${userLiked ? 'active' : ''}" onclick="event.stopPropagation(); app.toggleLike('${post.id}', true)">👍 ${post.likes || 0}</button>
+                        <button class="dislike-btn ${userDisliked ? 'active' : ''}" onclick="event.stopPropagation(); app.toggleLike('${post.id}', false)">👎 ${post.dislikes || 0}</button>
                         <span class="comment-count">💬 ${commentCount}</span>
+                        ${isOwner ? `<button class="edit-btn" onclick="event.stopPropagation(); app.openEditPostModal('${post.id}')">수정</button>` : ''}
+                        ${isOwner ? `<button class="delete-btn" onclick="event.stopPropagation(); app.deletePost('${post.id}')">삭제</button>` : ''}
                     </div>
                 </div>
             </div>
         `;
+    }
+
+    // 포스트 삭제
+    async deletePost(postId) {
+        if (!confirm('정말로 이 포스트를 삭제하시겠습니까?')) return;
+        try {
+            const postRef = ref(this.database, `posts/${postId}`);
+            await set(postRef, null);
+            this.showToast('포스트가 삭제되었습니다.');
+        } catch (error) {
+            console.error('포스트 삭제 실패:', error);
+            this.showToast('포스트 삭제에 실패했습니다.');
+        }
+    }
+
+    // 포스트 수정 모달 열기
+    openEditPostModal(postId) {
+        const post = this.lastPosts && this.lastPosts.find(p => p.id === postId);
+        if (!post) return;
+        const modal = document.getElementById('post-modal');
+        const modalBody = document.getElementById('modal-body');
+        if (!modal || !modalBody) return;
+        modalBody.innerHTML = `
+            <div class="modal-post">
+                <h2>포스트 수정</h2>
+                <form id="edit-post-form">
+                    <div class="form-group">
+                        <label>선수 이름</label>
+                        <input type="text" id="edit-player-name" value="${this.escapeHtml(post.playerName)}" required>
+                    </div>
+                    <div class="form-group">
+                        <label>제목</label>
+                        <input type="text" id="edit-post-title" value="${this.escapeHtml(post.title)}" required>
+                    </div>
+                    <div class="form-group">
+                        <label>내용</label>
+                        <textarea id="edit-post-content" required>${this.escapeHtml(post.content)}</textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>태그 (쉼표로 구분)</label>
+                        <input type="text" id="edit-post-tags" value="${post.tags ? post.tags.join(', ') : ''}">
+                    </div>
+                    <button type="submit" class="submit-btn">저장</button>
+                </form>
+            </div>
+        `;
+        modal.style.display = 'block';
+        document.body.style.overflow = 'hidden';
+        const form = document.getElementById('edit-post-form');
+        form.onsubmit = (e) => {
+            e.preventDefault();
+            this.saveEditPost(postId);
+        };
+    }
+
+    // 포스트 수정 저장
+    async saveEditPost(postId) {
+        const playerName = document.getElementById('edit-player-name').value.trim();
+        const title = document.getElementById('edit-post-title').value.trim();
+        const content = document.getElementById('edit-post-content').value.trim();
+        const tagsInput = document.getElementById('edit-post-tags').value.trim();
+        const tags = tagsInput ? tagsInput.split(',').map(tag => tag.trim()).filter(tag => tag) : [];
+        try {
+            const postRef = ref(this.database, `posts/${postId}`);
+            await update(postRef, { playerName, title, content, tags });
+            this.showToast('포스트가 수정되었습니다.');
+            document.getElementById('post-modal').style.display = 'none';
+        } catch (error) {
+            console.error('포스트 수정 실패:', error);
+            this.showToast('포스트 수정에 실패했습니다.');
+        }
     }
 
     // 유틸리티 함수들

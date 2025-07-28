@@ -56,6 +56,17 @@ document.addEventListener('DOMContentLoaded', async function() {
     // 다크모드 로드
     loadTheme();
     
+    // 로고 클릭 시 홈 탭 이동
+    const mainLogo = document.getElementById('main-logo');
+    if (mainLogo) {
+        mainLogo.style.cursor = 'pointer';
+        mainLogo.addEventListener('click', () => {
+            if (app && app.switchTab) {
+                app.switchTab('home');
+            }
+        });
+    }
+
     console.log('🎉 실시간 커뮤니티 앱 초기화 완료!');
 });
 
