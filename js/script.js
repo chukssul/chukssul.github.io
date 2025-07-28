@@ -203,19 +203,14 @@ async function handlePostSubmit(e) {
     // 태그 처리
     const tags = tagsInput ? tagsInput.split(',').map(tag => tag.trim()).filter(tag => tag) : [];
     
-    // 이미지 처리 - GitHub Storage 사용
+    // 이미지 처리 - Cloudinary 사용
     let imageUrl = '';
     const imageFile = document.getElementById('post-image').files[0];
     
     if (imageFile) {
         try {
-            if (!window.GitHubImageStorage || !GitHubImageStorage.prototype.token) {
-                showToast('GitHub 토큰이 설정되지 않았습니다. 콘솔에서 setGitHubToken("YOUR_TOKEN")을 실행하세요.');
-                return;
-            }
-            
             showToast('이미지를 업로드하는 중...');
-            const storage = new GitHubImageStorage();
+            const storage = new CloudinaryImageStorage();
             imageUrl = await storage.uploadImage(imageFile);
             showToast('이미지 업로드 완료!');
         } catch (error) {
@@ -610,10 +605,10 @@ function handleImageUpload(e) {
         return;
     }
     
-    // GitHub Storage 파일 유효성 검증
+    // Cloudinary 파일 유효성 검증
     try {
-        if (window.GitHubImageStorage) {
-            const storage = new GitHubImageStorage();
+        if (window.CloudinaryImageStorage) {
+            const storage = new CloudinaryImageStorage();
             storage.validateFile(file);
         }
     } catch (error) {
@@ -752,26 +747,28 @@ function updateUserStats() {
     profileElements.likesReceived.textContent = likesReceived;
 }
 
-// GitHub Token 설정 함수
-function setGitHubToken(token) {
-    if (window.GitHubImageStorage) {
-        GitHubImageStorage.prototype.token = token;
-        console.log('✅ GitHub token이 설정되었습니다!');
-        showToast('GitHub 토큰이 설정되었습니다. 이제 이미지 업로드가 가능합니다!');
+// Cloudinary Cloud Name 설정 함수
+function setCloudinaryConfig(cloudName, uploadPreset = 'ml_default') {
+    if (window.CloudinaryImageStorage) {
+        CloudinaryImageStorage.prototype.cloudName = cloudName;
+        CloudinaryImageStorage.prototype.uploadPreset = uploadPreset;
+        CloudinaryImageStorage.prototype.apiUrl = `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`;
+        console.log('✅ Cloudinary 설정이 완료되었습니다!');
+        showToast('Cloudinary 설정 완료! 이제 이미지 업로드가 가능합니다!');
     } else {
-        console.error('❌ GitHubImageStorage가 로드되지 않았습니다.');
+        console.error('❌ CloudinaryImageStorage가 로드되지 않았습니다.');
     }
 }
 
-// 토큰 설정 안내 (페이지 로드 시)
+// Cloudinary 설정 안내 (페이지 로드 시)
 setTimeout(() => {
-    console.log('🔑 GitHub Token 설정이 필요합니다!');
+    console.log('☁️ Cloudinary 설정이 필요합니다!');
     console.log('브라우저 콘솔에서 다음 명령어를 실행하세요:');
-    console.log('setGitHubToken("YOUR_GITHUB_TOKEN")');
+    console.log('setCloudinaryConfig("YOUR_CLOUD_NAME")');
     console.log('');
     console.log('📋 설정 방법:');
-    console.log('1. GitHub → Settings → Developer settings → Personal access tokens');
-    console.log('2. "Generate new token (classic)" 클릭');
-    console.log('3. repo 권한 선택 후 토큰 생성');
-    console.log('4. 생성된 토큰을 위 명령어에 입력');
+    console.log('1. https://cloudinary.com 에서 무료 계정 생성');
+    console.log('2. 대시보드에서 "Cloud Name" 확인');
+    console.log('3. Settings → Upload → Upload presets에서 "Enable unsigned uploading" 체크');
+    console.log('4. 생성된 Cloud Name을 위 명령어에 입력');
 }, 1000); 
