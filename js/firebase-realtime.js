@@ -49,8 +49,9 @@ class PlayerCommunityApp {
         const onlineRef = ref(this.database, 'online');
         onValue(onlineRef, (snapshot) => {
             let onlineCount = 0;
-            if (snapshot.exists() && typeof snapshot.numChildren === 'function') {
-                onlineCount = snapshot.numChildren();
+            if (snapshot.exists()) {
+                const val = snapshot.val();
+                onlineCount = val && typeof val === 'object' ? Object.keys(val).length : 0;
             }
             const onlineCountElement = document.getElementById('online-count');
             if (onlineCountElement) {
@@ -404,7 +405,78 @@ class PlayerCommunityApp {
             content.classList.toggle('active', content.id === `${tabName}-tab`);
         });
     }
+
+    // 포스트 상세 모달 열기
+    openPostModal(postId) {
+        const post = this.lastPosts && this.lastPosts.find(p => p.id === postId);
+        if (!post) return;
+        const modal = document.getElementById('post-modal');
+        const modalBody = document.getElementById('modal-body');
+        if (!modal || !modalBody) return;
+        modalBody.innerHTML = `
+            <div class="modal-post">
+                <div class="modal-post-header">
+                    <h2 class="modal-post-title">${this.escapeHtml(post.title)}</h2>
+                    <div class="modal-post-meta">
+                        <span class="player-tag">${this.escapeHtml(post.playerName)}</span>
+                        <span>작성자: ${this.escapeHtml(post.author)}</span>
+                        <span>${this.formatDate(post.timestamp)}</span>
+                    </div>
+                    ${post.tags && post.tags.length > 0 ? `
+                        <div class="post-tags">
+                            ${post.tags.map(tag => `<span class="tag">${this.escapeHtml(tag)}</span>`).join('')}
+                        </div>
+                    ` : ''}
+                    <div class="post-actions" style="margin-top: 1rem;">
+                        <button class="like-btn ${post.likedBy && post.likedBy[this.currentUser] ? 'active' : ''}" onclick="app.toggleLike('${post.id}', true); window.openPostModal('${post.id}')">👍 ${post.likes || 0}</button>
+                        <button class="dislike-btn ${post.dislikedBy && post.dislikedBy[this.currentUser] ? 'active' : ''}" onclick="app.toggleLike('${post.id}', false); window.openPostModal('${post.id}')">👎 ${post.dislikes || 0}</button>
+                    </div>
+                </div>
+                ${post.image ? `<img src="${post.image}" alt="포스트 이미지" style="width: 100%; max-height: 400px; object-fit: cover; border-radius: 10px; margin: 1rem 0;">` : ''}
+                <div class="modal-post-content">
+                    ${this.escapeHtml(post.content).replace(/\n/g, '<br>')}
+                </div>
+                <div class="comments-section">
+                    <h3 class="comments-header">댓글 (${post.comments ? Object.keys(post.comments).length : 0})</h3>
+                    <div class="comment-form">
+                        <textarea id="comment-content" placeholder="댓글을 입력하세요..." rows="3"></textarea>
+                        <input type="text" id="comment-author" placeholder="닉네임을 입력하세요" required>
+                        <button type="button" class="comment-submit" onclick="window.addCommentToPost('${post.id}')">댓글 작성</button>
+                    </div>
+                    <div class="comments-list">
+                        ${post.comments ? Object.values(post.comments).map(comment => `
+                            <div class="comment">
+                                <div class="comment-author">${this.escapeHtml(comment.author)}</div>
+                                <div class="comment-date">${this.formatDate(comment.timestamp)}</div>
+                                <div class="comment-content">${this.escapeHtml(comment.content).replace(/\n/g, '<br>')}</div>
+                            </div>
+                        `).join('') : ''}
+                    </div>
+                </div>
+            </div>
+        `;
+        modal.style.display = 'block';
+        document.body.style.overflow = 'hidden';
+    }
 }
 
 // 전역 앱 인스턴스
 window.PlayerCommunityApp = PlayerCommunityApp; 
+
+// 전역 연결
+window.openPostModal = function(postId) {
+    if (window.app && window.app.openPostModal) {
+        window.app.openPostModal(postId);
+    }
+};
+window.addCommentToPost = function(postId) {
+    if (!window.app) return;
+    const content = document.getElementById('comment-content').value.trim();
+    const author = document.getElementById('comment-author').value.trim();
+    if (!content || !author) {
+        window.app.showToast('댓글 내용과 닉네임을 모두 입력해주세요!');
+        return;
+    }
+    window.app.addComment(postId, { content, author });
+    setTimeout(() => window.openPostModal(postId), 300); // 댓글 작성 후 모달 새로고침
+}; 
