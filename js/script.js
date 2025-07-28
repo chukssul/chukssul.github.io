@@ -53,11 +53,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     // 프로필 로드
     loadProfile();
     
-    // 기존 포스트 완전 초기화 (샘플 포스트 제거)
-    posts = [];
-    localStorage.removeItem('posts');
-    localStorage.setItem('posts', JSON.stringify(posts));
-    console.log('✅ 모든 기존 포스트가 제거되었습니다. 깨끗한 상태로 시작합니다.');
+
     
     // 포스트 표시
     displayPosts();
