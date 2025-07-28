@@ -747,8 +747,8 @@ function updateUserStats() {
     profileElements.likesReceived.textContent = likesReceived;
 }
 
-// Cloudinary Cloud Name 설정 함수
-function setCloudinaryConfig(cloudName, uploadPreset = 'ml_default') {
+// Cloudinary Cloud Name 설정 함수 (이미 기본값으로 설정됨)
+function setCloudinaryConfig(cloudName = 'dycw6o34p', uploadPreset = 'ml_default') {
     if (window.CloudinaryImageStorage) {
         CloudinaryImageStorage.prototype.cloudName = cloudName;
         CloudinaryImageStorage.prototype.uploadPreset = uploadPreset;
@@ -760,15 +760,16 @@ function setCloudinaryConfig(cloudName, uploadPreset = 'ml_default') {
     }
 }
 
-// Cloudinary 설정 안내 (페이지 로드 시)
+// Cloudinary 설정 완료 안내 (페이지 로드 시)
 setTimeout(() => {
-    console.log('☁️ Cloudinary 설정이 필요합니다!');
-    console.log('브라우저 콘솔에서 다음 명령어를 실행하세요:');
-    console.log('setCloudinaryConfig("YOUR_CLOUD_NAME")');
+    console.log('✅ Cloudinary가 이미 설정되었습니다!');
+    console.log('🎉 바로 이미지 업로드가 가능합니다!');
     console.log('');
-    console.log('📋 설정 방법:');
-    console.log('1. https://cloudinary.com 에서 무료 계정 생성');
-    console.log('2. 대시보드에서 "Cloud Name" 확인');
-    console.log('3. Settings → Upload → Upload presets에서 "Enable unsigned uploading" 체크');
-    console.log('4. 생성된 Cloud Name을 위 명령어에 입력');
+    console.log('📸 사용법:');
+    console.log('1. "포스트 작성" 탭 클릭');
+    console.log('2. 이미지 파일 선택');
+    console.log('3. 포스트 작성 후 업로드');
+    console.log('');
+    console.log('⚙️ 다른 Cloud Name 사용하려면:');
+    console.log('setCloudinaryConfig("YOUR_CLOUD_NAME")');
 }, 1000); 

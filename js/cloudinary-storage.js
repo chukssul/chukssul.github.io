@@ -2,7 +2,7 @@
 class CloudinaryImageStorage {
     constructor() {
         // Cloudinary 설정 (무료 계정)
-        this.cloudName = 'YOUR_CLOUD_NAME'; // 실제 Cloud Name으로 교체
+        this.cloudName = 'dycw6o34p'; // 실제 Cloud Name
         this.uploadPreset = 'ml_default'; // unsigned 업로드용 기본 preset
         this.apiUrl = `https://api.cloudinary.com/v1_1/${this.cloudName}/image/upload`;
     }
