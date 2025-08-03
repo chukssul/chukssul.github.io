@@ -834,6 +834,7 @@ async function loadProfile() {
     
     try {
         console.log('📂 사용자 프로필 로드 시작:', currentUser.uid);
+        console.log('👤 현재 사용자 정보:', currentUser);
         
         // Firebase에서 사용자 프로필 데이터 가져오기 (users 경로 사용)
         const userProfileRef = ref(window.database, `users/${currentUser.uid}/profile`);
@@ -841,16 +842,28 @@ async function loadProfile() {
         
         if (snapshot.exists()) {
             const firebaseProfile = snapshot.val();
+            // Firebase에서 로드한 정보로 기존 프로필 업데이트 (덮어쓰기)
             userProfile = {
-                nickname: firebaseProfile.nickname || '',
-                bio: firebaseProfile.bio || '',
-                favoriteTeam: firebaseProfile.favoriteTeam || '',
-                avatar: firebaseProfile.avatar || ''
+                nickname: firebaseProfile.nickname || userProfile?.nickname || '',
+                bio: firebaseProfile.bio || userProfile?.bio || '',
+                favoriteTeam: firebaseProfile.favoriteTeam || userProfile?.favoriteTeam || '',
+                avatar: firebaseProfile.avatar || userProfile?.avatar || ''
             };
             console.log('✅ Firebase에서 프로필 로드 완료:', userProfile);
         } else {
             // Firebase에 프로필이 없으면 기존 userProfile 유지 (초기화하지 않음)
             console.log('ℹ️ Firebase에 프로필이 없어 기존 프로필 정보 유지');
+            
+            // userProfile이 undefined인 경우 초기화
+            if (!userProfile) {
+                userProfile = {
+                    nickname: '',
+                    bio: '',
+                    favoriteTeam: '',
+                    avatar: ''
+                };
+                console.log('⚠️ userProfile이 undefined여서 초기화함');
+            }
         }
         
         // UI에 프로필 정보 표시
@@ -911,6 +924,7 @@ async function saveProfile() {
         await waitForFirebaseFunctions();
         
         console.log('💾 프로필 저장 시작:', currentUser.uid);
+        console.log('👤 현재 사용자 정보:', currentUser);
         console.log('🔧 Firebase 함수 확인:', {
             database: !!window.database,
             ref: !!window.ref,
@@ -918,6 +932,17 @@ async function saveProfile() {
             get: !!window.get,
             serverTimestamp: !!window.serverTimestamp
         });
+        
+        // userProfile이 undefined인 경우 초기화
+        if (!userProfile) {
+            userProfile = {
+                nickname: '',
+                bio: '',
+                favoriteTeam: '',
+                avatar: ''
+            };
+            console.log('⚠️ userProfile이 undefined여서 초기화함');
+        }
         
         // 프로필 데이터 수집
         userProfile.nickname = profileElements.nickname.value.trim();
@@ -1220,7 +1245,18 @@ function initializeAuth() {
             // 사용자 정보를 Firebase에 저장
             await saveUserToDatabase(currentUser);
             
-            // 사용자 프로필 로드
+            // localStorage에서 프로필 정보 먼저 로드 (빠른 복원)
+            const savedProfile = localStorage.getItem('userProfile');
+            if (savedProfile) {
+                try {
+                    userProfile = JSON.parse(savedProfile);
+                    console.log('💾 localStorage에서 프로필 복원:', userProfile);
+                } catch (error) {
+                    console.error('❌ localStorage 프로필 파싱 실패:', error);
+                }
+            }
+            
+            // Firebase에서 최신 프로필 정보 로드 (덮어쓰기)
             await loadProfile();
             
         } else {
