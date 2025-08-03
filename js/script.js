@@ -58,12 +58,13 @@ let app = null;
 
 document.addEventListener('DOMContentLoaded', async function() {
     // Firebase 모듈 import
-    const { ref, set, serverTimestamp } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js');
+    const { ref, set, get, serverTimestamp } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js');
     const { signInWithPopup, signOut, onAuthStateChanged } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js');
     
     // 전역 변수로 설정
     window.ref = ref;
     window.set = set;
+    window.get = get;
     window.serverTimestamp = serverTimestamp;
     window.signInWithPopup = signInWithPopup;
     window.signOut = signOut;
@@ -158,6 +159,22 @@ function waitForDependencies() {
             }
         };
         checkDependencies();
+    });
+}
+
+// Firebase 함수들이 로드될 때까지 대기
+function waitForFirebaseFunctions() {
+    return new Promise((resolve) => {
+        const checkFirebaseFunctions = () => {
+            if (window.database && window.ref && window.set && window.get && window.serverTimestamp) {
+                console.log('✅ Firebase 함수들이 모두 로드되었습니다.');
+                resolve();
+            } else {
+                console.log('⏳ Firebase 함수 로드 대기 중...');
+                setTimeout(checkFirebaseFunctions, 100);
+            }
+        };
+        checkFirebaseFunctions();
     });
 }
 
@@ -811,6 +828,11 @@ async function loadProfile() {
         return;
     }
     
+    if (!window.database || !window.ref || !window.get) {
+        console.error('❌ Firebase 함수들이 로드되지 않았습니다.');
+        return;
+    }
+    
     try {
         console.log('📂 사용자 프로필 로드 시작:', currentUser.uid);
         
@@ -826,7 +848,7 @@ async function loadProfile() {
                 favoriteTeam: firebaseProfile.favoriteTeam || '',
                 avatar: firebaseProfile.avatar || ''
             };
-            console.log('✅ Firebase에서 프로필 로드 완료');
+            console.log('✅ Firebase에서 프로필 로드 완료:', userProfile);
         } else {
             // Firebase에 프로필이 없으면 기본값 사용
             userProfile = {
@@ -856,7 +878,12 @@ async function loadProfile() {
         
     } catch (error) {
         console.error('❌ 프로필 로드 실패:', error);
-        showToast('프로필 로드에 실패했습니다.');
+        console.error('❌ 에러 상세 정보:', {
+            message: error.message,
+            code: error.code,
+            stack: error.stack
+        });
+        showToast(`프로필 로드에 실패했습니다: ${error.message}`);
     }
 }
 
@@ -867,7 +894,17 @@ async function saveProfile() {
     }
     
     try {
+        // Firebase 함수들이 로드될 때까지 대기
+        await waitForFirebaseFunctions();
+        
         console.log('💾 프로필 저장 시작:', currentUser.uid);
+        console.log('🔧 Firebase 함수 확인:', {
+            database: !!window.database,
+            ref: !!window.ref,
+            set: !!window.set,
+            get: !!window.get,
+            serverTimestamp: !!window.serverTimestamp
+        });
         
         // 프로필 데이터 수집
         userProfile.nickname = profileElements.nickname.value.trim();
@@ -879,12 +916,20 @@ async function saveProfile() {
             userProfile.avatar = avatarImg.src;
         }
         
+        console.log('📝 수집된 프로필 데이터:', userProfile);
+        
         // Firebase에 프로필 저장
         const userProfileRef = ref(window.database, `userProfiles/${currentUser.uid}`);
-        await set(userProfileRef, {
-            ...userProfile,
+        const profileData = {
+            nickname: userProfile.nickname,
+            bio: userProfile.bio,
+            favoriteTeam: userProfile.favoriteTeam,
+            avatar: userProfile.avatar,
             updatedAt: serverTimestamp()
-        });
+        };
+        
+        console.log('🔥 Firebase에 저장할 데이터:', profileData);
+        await set(userProfileRef, profileData);
         
         console.log('✅ 프로필이 Firebase에 저장되었습니다.');
         showToast('프로필이 저장되었습니다!');
@@ -897,7 +942,12 @@ async function saveProfile() {
         
     } catch (error) {
         console.error('❌ 프로필 저장 실패:', error);
-        showToast('프로필 저장에 실패했습니다.');
+        console.error('❌ 에러 상세 정보:', {
+            message: error.message,
+            code: error.code,
+            stack: error.stack
+        });
+        showToast(`프로필 저장에 실패했습니다: ${error.message}`);
     }
 }
 
