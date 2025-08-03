@@ -60,7 +60,7 @@ let isLoadingPosts = true; // 포스트 로딩 상태 추적
 document.addEventListener('DOMContentLoaded', async function() {
     // Firebase 모듈 import
     const { ref, set, get, serverTimestamp } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js');
-    const { signInWithPopup, signOut, onAuthStateChanged } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js');
+    const { signInWithPopup, signInWithRedirect, getRedirectResult, signOut, onAuthStateChanged } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js');
     
     // 전역 변수로 설정
     window.ref = ref;
@@ -68,6 +68,8 @@ document.addEventListener('DOMContentLoaded', async function() {
     window.get = get;
     window.serverTimestamp = serverTimestamp;
     window.signInWithPopup = signInWithPopup;
+    window.signInWithRedirect = signInWithRedirect;
+    window.getRedirectResult = getRedirectResult;
     window.signOut = signOut;
     window.onAuthStateChanged = onAuthStateChanged;
     
