@@ -1204,7 +1204,7 @@ async function handleGoogleLogin() {
         loginButtons.forEach(btn => {
             if (btn) {
                 btn.disabled = true;
-                btn.textContent = '로그인 중...';
+                btn.innerHTML = '<span class="auth-icon">⏳</span>로그인 중...';
             }
         });
         
@@ -1259,6 +1259,11 @@ async function handleGoogleLogin() {
             await switchTab('create');
         }
         
+        // 로그인 후 페이지 자동 새로고침 (수정/삭제 버튼 표시를 위해)
+        setTimeout(() => {
+            window.location.reload();
+        }, 1500);
+        
         // 모바일 환경에서 추가 안정성 확보
         setTimeout(() => {
             console.log('📱 모바일 환경 프로필 안정성 체크');
@@ -1288,14 +1293,8 @@ async function handleGoogleLogin() {
         showToast(errorMessage);
         
     } finally {
-        // 로그인 버튼 다시 활성화
-        const loginButtons = [loginBtn, profileLoginBtn];
-        loginButtons.forEach(btn => {
-            if (btn) {
-                btn.disabled = false;
-                btn.innerHTML = '<span class="auth-icon">🔑</span>구글로 로그인';
-            }
-        });
+        // 로그인 버튼 다시 활성화 (즉시 실행)
+        resetLoginButtons();
     }
 }
 
@@ -1418,6 +1417,17 @@ async function updateProfileTab() {
     }
 }
 
+// 로그인 버튼 상태 리셋 함수
+function resetLoginButtons() {
+    const loginButtons = [loginBtn, profileLoginBtn];
+    loginButtons.forEach(btn => {
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = '<span class="auth-icon">🔑</span>구글로 로그인';
+        }
+    });
+}
+
 // Firebase 인증 상태 감지
 function initializeAuth() {
     console.log('🔐 인증 상태 감지 시작...');
@@ -1474,6 +1484,9 @@ function initializeAuth() {
             
             // 프로필 정보는 초기화하지 않음 (다음 로그인 시 재사용)
             // userProfile은 그대로 유지
+            
+            // 로그인 버튼 상태 리셋
+            resetLoginButtons();
         }
         
         // UI 업데이트
