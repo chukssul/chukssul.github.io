@@ -989,42 +989,24 @@ async function loadProfile() {
             const firebaseProfile = snapshot.val();
             console.log('🔥 Firebase에서 가져온 프로필:', firebaseProfile);
             
-            // 기존 프로필 정보를 우선 보존하고, Firebase에서 가져온 정보로 보완
-            const updatedProfile = {
-                nickname: firebaseProfile.nickname || userProfile?.nickname || '',
-                bio: firebaseProfile.bio || userProfile?.bio || '',
-                favoriteTeam: firebaseProfile.favoriteTeam || userProfile?.favoriteTeam || '',
-                avatar: firebaseProfile.avatar || userProfile?.avatar || ''
+            // Firebase에서 가져온 정보로 프로필 업데이트
+            userProfile = {
+                nickname: firebaseProfile.nickname || '',
+                bio: firebaseProfile.bio || '',
+                favoriteTeam: firebaseProfile.favoriteTeam || '',
+                avatar: firebaseProfile.avatar || ''
             };
-            
-            // 기존 프로필과 비교하여 변경사항이 있는지 확인
-            const hasChanges = JSON.stringify(userProfile) !== JSON.stringify(updatedProfile);
-            
-            if (hasChanges) {
-                console.log('🔄 프로필 정보 업데이트:', {
-                    before: userProfile,
-                    after: updatedProfile
-                });
-                userProfile = updatedProfile;
-            } else {
-                console.log('✅ 프로필 정보 변경사항 없음');
-            }
             
             console.log('✅ Firebase에서 프로필 로드 완료:', userProfile);
         } else {
-            // Firebase에 프로필이 없으면 기존 userProfile 유지
-            console.log('ℹ️ Firebase에 프로필이 없어 기존 프로필 정보 유지');
-            
-            // userProfile이 undefined인 경우에만 초기화
-            if (!userProfile) {
-                userProfile = {
-                    nickname: '',
-                    bio: '',
-                    favoriteTeam: '',
-                    avatar: ''
-                };
-                console.log('⚠️ userProfile이 undefined여서 초기화함');
-            }
+            // Firebase에 프로필이 없으면 빈 프로필로 초기화
+            console.log('ℹ️ Firebase에 프로필이 없어 빈 프로필로 초기화');
+            userProfile = {
+                nickname: '',
+                bio: '',
+                favoriteTeam: '',
+                avatar: ''
+            };
         }
         
         // localStorage에 프로필 정보 백업 저장
@@ -1244,7 +1226,10 @@ async function handleGoogleLogin() {
         // Firebase에 사용자 정보 저장
         await saveUserToDatabase(currentUser);
         
-        // localStorage에서 기존 프로필 정보 복원 (빠른 복원)
+        // Firebase에서 최신 프로필 정보 로드 (기존 정보 보존)
+        await loadProfile();
+        
+        // localStorage에서 기존 프로필 정보 복원 (백업용)
         const savedProfile = localStorage.getItem('userProfile');
         if (savedProfile && !userProfile) {
             try {
@@ -1256,9 +1241,6 @@ async function handleGoogleLogin() {
                 console.error('❌ localStorage 프로필 파싱 실패:', error);
             }
         }
-        
-        // Firebase에서 최신 프로필 정보 로드 (기존 정보 보존)
-        await loadProfile();
         
         // UI 업데이트
         updateAuthUI();
@@ -1455,25 +1437,22 @@ function initializeAuth() {
             // 사용자 정보를 Firebase에 저장
             await saveUserToDatabase(currentUser);
             
-            // localStorage에서 프로필 정보 먼저 로드 (빠른 복원)
+            // Firebase에서 최신 프로필 정보 로드 (기존 정보 보존)
+            await loadProfile();
+            
+            // localStorage에서 프로필 정보 백업 복원 (Firebase에 없을 경우)
             const savedProfile = localStorage.getItem('userProfile');
-            if (savedProfile) {
+            if (savedProfile && (!userProfile || Object.keys(userProfile).length === 0)) {
                 try {
                     const parsedProfile = JSON.parse(savedProfile);
-                    // 기존 프로필이 있으면 유지, 없으면 새로 설정
-                    if (!userProfile) {
-                        userProfile = parsedProfile;
-                        console.log('💾 localStorage에서 프로필 복원:', userProfile);
-                    } else {
-                        console.log('✅ 기존 프로필 정보 유지:', userProfile);
-                    }
+                    userProfile = parsedProfile;
+                    console.log('💾 localStorage에서 프로필 백업 복원:', userProfile);
+                    // UI 업데이트
+                    updateProfileUI();
                 } catch (error) {
                     console.error('❌ localStorage 프로필 파싱 실패:', error);
                 }
             }
-            
-            // Firebase에서 최신 프로필 정보 로드 (기존 정보 보존)
-            await loadProfile();
             
             // 모바일 환경에서 추가 안정성 확보
             setTimeout(() => {
