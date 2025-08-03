@@ -85,8 +85,21 @@ document.addEventListener('DOMContentLoaded', async function() {
     // 다크모드 로드
     loadTheme();
     
-    // 프로필 로드
-    loadProfile();
+    // 프로필 로드 (localStorage에서 먼저 복원)
+    const savedProfile = localStorage.getItem('userProfile');
+    if (savedProfile) {
+        try {
+            userProfile = JSON.parse(savedProfile);
+            console.log('💾 페이지 로드 시 localStorage에서 프로필 복원:', userProfile);
+        } catch (error) {
+            console.error('❌ localStorage 프로필 파싱 실패:', error);
+        }
+    }
+    
+    // Firebase에서 프로필 로드 (로그인된 경우에만)
+    if (currentUser) {
+        loadProfile();
+    }
     
     // 로딩 상태 표시
     showLoadingPosts();
@@ -964,6 +977,7 @@ async function loadProfile() {
     try {
         console.log('📂 사용자 프로필 로드 시작:', currentUser.uid);
         console.log('👤 현재 사용자 정보:', currentUser);
+        console.log('💾 기존 프로필 정보:', userProfile);
         
         // Firebase에서 사용자 프로필 데이터 가져오기 (users 경로 사용)
         const userProfileRef = ref(window.database, `users/${currentUser.uid}/profile`);
@@ -971,19 +985,35 @@ async function loadProfile() {
         
         if (snapshot.exists()) {
             const firebaseProfile = snapshot.val();
-            // Firebase에서 로드한 정보로 기존 프로필 업데이트 (덮어쓰기)
-            userProfile = {
+            console.log('🔥 Firebase에서 가져온 프로필:', firebaseProfile);
+            
+            // 기존 프로필 정보를 우선 보존하고, Firebase에서 가져온 정보로 보완
+            const updatedProfile = {
                 nickname: firebaseProfile.nickname || userProfile?.nickname || '',
                 bio: firebaseProfile.bio || userProfile?.bio || '',
                 favoriteTeam: firebaseProfile.favoriteTeam || userProfile?.favoriteTeam || '',
                 avatar: firebaseProfile.avatar || userProfile?.avatar || ''
             };
+            
+            // 기존 프로필과 비교하여 변경사항이 있는지 확인
+            const hasChanges = JSON.stringify(userProfile) !== JSON.stringify(updatedProfile);
+            
+            if (hasChanges) {
+                console.log('🔄 프로필 정보 업데이트:', {
+                    before: userProfile,
+                    after: updatedProfile
+                });
+                userProfile = updatedProfile;
+            } else {
+                console.log('✅ 프로필 정보 변경사항 없음');
+            }
+            
             console.log('✅ Firebase에서 프로필 로드 완료:', userProfile);
         } else {
-            // Firebase에 프로필이 없으면 기존 userProfile 유지 (초기화하지 않음)
+            // Firebase에 프로필이 없으면 기존 userProfile 유지
             console.log('ℹ️ Firebase에 프로필이 없어 기존 프로필 정보 유지');
             
-            // userProfile이 undefined인 경우 초기화
+            // userProfile이 undefined인 경우에만 초기화
             if (!userProfile) {
                 userProfile = {
                     nickname: '',
@@ -995,21 +1025,12 @@ async function loadProfile() {
             }
         }
         
+        // localStorage에 프로필 정보 백업 저장
+        localStorage.setItem('userProfile', JSON.stringify(userProfile));
+        console.log('💾 프로필 정보를 localStorage에 백업 저장');
+        
         // UI에 프로필 정보 표시
-        profileElements.nickname.value = userProfile.nickname || '';
-        profileElements.bio.value = userProfile.bio || '';
-        profileElements.favoriteTeam.value = userProfile.favoriteTeam || '';
-        
-        if (userProfile.avatar) {
-            profileElements.avatarPreview.innerHTML = `<img src="${userProfile.avatar}" alt="프로필 이미지">`;
-            profileElements.avatarPreview.style.display = 'block';
-        } else {
-            profileElements.avatarPreview.innerHTML = '';
-            profileElements.avatarPreview.style.display = 'none';
-        }
-        
-        // 헤더 UI 업데이트
-        updateAuthUI();
+        updateProfileUI();
         
     } catch (error) {
         console.error('❌ 프로필 로드 실패:', error);
@@ -1023,10 +1044,32 @@ async function loadProfile() {
         console.log('⚠️ 프로필 로드 실패했지만 기존 정보 유지:', userProfile);
         
         // UI에 기존 프로필 정보 표시
-        profileElements.nickname.value = userProfile.nickname || '';
-        profileElements.bio.value = userProfile.bio || '';
-        profileElements.favoriteTeam.value = userProfile.favoriteTeam || '';
+        updateProfileUI();
         
+        showToast(`프로필 로드에 실패했습니다: ${error.message}`);
+    }
+}
+
+// 프로필 UI 업데이트 함수 분리
+function updateProfileUI() {
+    if (!userProfile) {
+        console.log('⚠️ userProfile이 없어 UI 업데이트 건너뜀');
+        return;
+    }
+    
+    // 프로필 폼 필드 업데이트
+    if (profileElements.nickname) {
+        profileElements.nickname.value = userProfile.nickname || '';
+    }
+    if (profileElements.bio) {
+        profileElements.bio.value = userProfile.bio || '';
+    }
+    if (profileElements.favoriteTeam) {
+        profileElements.favoriteTeam.value = userProfile.favoriteTeam || '';
+    }
+    
+    // 아바타 미리보기 업데이트
+    if (profileElements.avatarPreview) {
         if (userProfile.avatar) {
             profileElements.avatarPreview.innerHTML = `<img src="${userProfile.avatar}" alt="프로필 이미지">`;
             profileElements.avatarPreview.style.display = 'block';
@@ -1034,12 +1077,12 @@ async function loadProfile() {
             profileElements.avatarPreview.innerHTML = '';
             profileElements.avatarPreview.style.display = 'none';
         }
-        
-        // 헤더 UI 업데이트
-        updateAuthUI();
-        
-        showToast(`프로필 로드에 실패했습니다: ${error.message}`);
     }
+    
+    // 헤더 UI 업데이트
+    updateAuthUI();
+    
+    console.log('✅ 프로필 UI 업데이트 완료');
 }
 
 async function saveProfile() {
@@ -1199,7 +1242,20 @@ async function handleGoogleLogin() {
         // Firebase에 사용자 정보 저장
         await saveUserToDatabase(currentUser);
         
-        // 사용자 프로필 로드
+        // localStorage에서 기존 프로필 정보 복원 (빠른 복원)
+        const savedProfile = localStorage.getItem('userProfile');
+        if (savedProfile && !userProfile) {
+            try {
+                userProfile = JSON.parse(savedProfile);
+                console.log('💾 localStorage에서 프로필 복원:', userProfile);
+                // 즉시 UI 업데이트
+                updateProfileUI();
+            } catch (error) {
+                console.error('❌ localStorage 프로필 파싱 실패:', error);
+            }
+        }
+        
+        // Firebase에서 최신 프로필 정보 로드 (기존 정보 보존)
         await loadProfile();
         
         // UI 업데이트
@@ -1219,8 +1275,17 @@ async function handleGoogleLogin() {
             await switchTab('create');
         }
         
-        // 로그인 후 포스트 작성 탭으로 자동 이동 (선택사항)
-        // await switchTab('create');
+        // 모바일 환경에서 추가 안정성 확보
+        setTimeout(() => {
+            console.log('📱 모바일 환경 프로필 안정성 체크');
+            if (userProfile && Object.keys(userProfile).length > 0) {
+                console.log('✅ 프로필 정보 안정성 확인됨');
+                updateProfileUI();
+            } else {
+                console.log('⚠️ 프로필 정보가 비어있음 - 재로드 시도');
+                loadProfile();
+            }
+        }, 1500);
         
     } catch (error) {
         console.error('Google 로그인 실패:', error);
@@ -1392,15 +1457,33 @@ function initializeAuth() {
             const savedProfile = localStorage.getItem('userProfile');
             if (savedProfile) {
                 try {
-                    userProfile = JSON.parse(savedProfile);
-                    console.log('💾 localStorage에서 프로필 복원:', userProfile);
+                    const parsedProfile = JSON.parse(savedProfile);
+                    // 기존 프로필이 있으면 유지, 없으면 새로 설정
+                    if (!userProfile) {
+                        userProfile = parsedProfile;
+                        console.log('💾 localStorage에서 프로필 복원:', userProfile);
+                    } else {
+                        console.log('✅ 기존 프로필 정보 유지:', userProfile);
+                    }
                 } catch (error) {
                     console.error('❌ localStorage 프로필 파싱 실패:', error);
                 }
             }
             
-            // Firebase에서 최신 프로필 정보 로드 (덮어쓰기)
+            // Firebase에서 최신 프로필 정보 로드 (기존 정보 보존)
             await loadProfile();
+            
+            // 모바일 환경에서 추가 안정성 확보
+            setTimeout(() => {
+                console.log('📱 모바일 환경 안정성 체크');
+                if (userProfile && Object.keys(userProfile).length > 0) {
+                    console.log('✅ 프로필 정보 안정성 확인됨');
+                    updateProfileUI();
+                } else {
+                    console.log('⚠️ 프로필 정보가 비어있음 - 재로드 시도');
+                    loadProfile();
+                }
+            }, 1000);
             
         } else {
             // 로그아웃된 상태
