@@ -27,6 +27,8 @@ class PlayerCommunityApp {
     setupRealtimeListeners() {
         // 포스트 실시간 업데이트
         const postsRef = ref(this.database, 'posts');
+        this.postsRef = postsRef; // 참조 저장
+        
         onValue(postsRef, (snapshot) => {
             const posts = [];
             if (snapshot.exists()) {
@@ -41,6 +43,9 @@ class PlayerCommunityApp {
             // 최신순 정렬
             posts.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
             this.displayPosts(posts);
+            
+            // 태그 필터 업데이트
+            this.updateTagFilter(posts);
             
             console.log(`📡 실시간 포스트 업데이트: ${posts.length}개`);
         });
@@ -244,6 +249,54 @@ class PlayerCommunityApp {
         }
 
         container.innerHTML = posts.map(post => this.createPostHTML(post)).join('');
+    }
+
+    // 포스트 데이터 새로고침
+    async refreshPosts() {
+        try {
+            if (this.postsRef) {
+                const snapshot = await get(this.postsRef);
+                const posts = [];
+                if (snapshot.exists()) {
+                    snapshot.forEach((childSnapshot) => {
+                        posts.push({
+                            id: childSnapshot.key,
+                            ...childSnapshot.val()
+                        });
+                    });
+                }
+                
+                // 최신순 정렬
+                posts.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+                this.displayPosts(posts);
+                
+                // 태그 필터 업데이트
+                this.updateTagFilter(posts);
+                
+                console.log(`🔄 포스트 데이터 새로고침 완료: ${posts.length}개`);
+                this.showToast('최신 포스트를 불러왔습니다!');
+            }
+        } catch (error) {
+            console.error('포스트 새로고침 실패:', error);
+            this.showToast('데이터 새로고침에 실패했습니다.');
+        }
+    }
+
+    // 태그 필터 업데이트
+    updateTagFilter(posts = this.lastPosts || []) {
+        const tagFilter = document.getElementById('tag-filter');
+        if (!tagFilter) return;
+        
+        const allTags = new Set();
+        posts.forEach(post => {
+            if (post.tags && Array.isArray(post.tags)) {
+                post.tags.forEach(tag => allTags.add(tag));
+            }
+        });
+        
+        const sortedTags = Array.from(allTags).sort();
+        tagFilter.innerHTML = '<option value="">모든 태그</option>' + 
+            sortedTags.map(tag => `<option value="${tag}">${tag}</option>`).join('');
     }
 
     // 포스트 HTML 생성

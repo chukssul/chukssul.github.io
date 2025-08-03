@@ -53,15 +53,13 @@ document.addEventListener('DOMContentLoaded', async function() {
     // 프로필 로드
     loadProfile();
     
-
-    
-    // 포스트 표시
+    // 초기 포스트 표시 (Firebase 초기화 전에 로컬 데이터로 먼저 표시)
     displayPosts();
     
     // 태그 필터 업데이트
     updateTagFilter();
     
-        // 프로필 통계 업데이트
+    // 프로필 통계 업데이트
     updateUserStats();
     
     // 로고 클릭 시 홈으로 이동 (샘플 페이지가 아닌 정상 홈)
@@ -71,6 +69,14 @@ document.addEventListener('DOMContentLoaded', async function() {
             e.preventDefault();
             // 홈 탭으로 이동
             switchTab('home');
+            
+            // Firebase 앱이 있으면 실시간 데이터 새로고침
+            if (app && app.refreshPosts) {
+                app.refreshPosts();
+            } else {
+                // 로컬 데이터 새로고침
+                displayPosts();
+            }
             
             // 스크롤을 맨 위로 이동
             window.scrollTo({
@@ -90,6 +96,11 @@ document.addEventListener('DOMContentLoaded', async function() {
         app = new PlayerCommunityApp();
         window.app = app; // window에 app 인스턴스 명시적으로 할당
         console.log('🎉 Firebase 실시간 기능 초기화 완료!');
+        
+        // Firebase 초기화 후 실시간 데이터 새로고침
+        if (app.refreshPosts) {
+            app.refreshPosts();
+        }
     } catch (error) {
         console.warn('⚠️ Firebase 초기화 실패 - 기본 기능만 사용 가능:', error);
     }
@@ -174,9 +185,14 @@ function switchTab(tabName) {
         // 태그 필터 초기화
         if (tagFilter) tagFilter.value = '';
         
-        // 포스트 다시 표시 (모든 포스트, 최신순)
-        const sortedPosts = [...posts].sort((a, b) => new Date(b.date) - new Date(a.date));
-        displayPosts(sortedPosts);
+        // Firebase 앱이 있으면 실시간 데이터 새로고침
+        if (app && app.refreshPosts) {
+            app.refreshPosts();
+        } else {
+            // 로컬 데이터 새로고침
+            const sortedPosts = [...posts].sort((a, b) => new Date(b.date) - new Date(a.date));
+            displayPosts(sortedPosts);
+        }
     }
 }
 
