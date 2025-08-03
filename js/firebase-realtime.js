@@ -47,6 +47,11 @@ class PlayerCommunityApp {
             // 태그 필터 업데이트
             this.updateTagFilter(posts);
             
+            // 로딩 상태 해제
+            if (window.isLoadingPosts) {
+                window.isLoadingPosts = false;
+            }
+            
             console.log(`📡 실시간 포스트 업데이트: ${posts.length}개`);
         });
 
@@ -253,8 +258,14 @@ class PlayerCommunityApp {
         this.lastPosts = posts;
         const container = document.getElementById('posts-container');
         
+        // 로딩 상태 제거
+        const loadingElement = container.querySelector('.loading-posts');
+        if (loadingElement) {
+            loadingElement.remove();
+        }
+        
         if (!posts || posts.length === 0) {
-            container.innerHTML = '<div class="loading">아직 포스트가 없습니다. 첫 번째 포스트를 작성해보세요! ✨</div>';
+            container.innerHTML = '<div class="no-posts">아직 포스트가 없습니다. 첫 번째 포스트를 작성해보세요! ✨</div>';
             return;
         }
 

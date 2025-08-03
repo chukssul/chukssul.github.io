@@ -55,6 +55,7 @@ const profileElements = {
 
 // Firebase + Cloudinary 실시간 커뮤니티 앱 초기화
 let app = null;
+let isLoadingPosts = true; // 포스트 로딩 상태 추적
 
 document.addEventListener('DOMContentLoaded', async function() {
     // Firebase 모듈 import
@@ -87,8 +88,9 @@ document.addEventListener('DOMContentLoaded', async function() {
     // 프로필 로드
     loadProfile();
     
-    // 초기 포스트 표시 (Firebase 초기화 전에 로컬 데이터로 먼저 표시)
-    displayPosts();
+    // 로딩 상태 표시
+    showLoadingPosts();
+    window.isLoadingPosts = true;
     
     // 태그 필터 업데이트
     updateTagFilter();
@@ -134,6 +136,9 @@ document.addEventListener('DOMContentLoaded', async function() {
         // Firebase 초기화 후 실시간 데이터 새로고침
         if (app.refreshPosts) {
             app.refreshPosts();
+        } else {
+            // Firebase 앱이 없으면 로컬 데이터로 포스트 표시
+            displayPosts();
         }
         
         // 인증 초기화
@@ -471,7 +476,22 @@ async function handlePostSubmit(e) {
     }
 }
 
+function showLoadingPosts() {
+    postsContainer.innerHTML = `
+        <div class="loading-posts">
+            <div class="loading-spinner">⚽</div>
+            <p>포스트를 불러오는 중...</p>
+        </div>
+    `;
+}
+
 function displayPosts(postsToShow = posts) {
+    // 로딩 상태 제거
+    const loadingElement = postsContainer.querySelector('.loading-posts');
+    if (loadingElement) {
+        loadingElement.remove();
+    }
+    
     if (postsToShow.length === 0) {
         postsContainer.innerHTML = '<div class="no-posts">포스트가 없습니다.</div>';
         return;
