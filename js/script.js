@@ -1109,6 +1109,11 @@ async function handleGoogleLogin() {
         // 환영 메시지 (설정된 닉네임 우선 사용)
         const welcomeName = (userProfile && userProfile.nickname) || user.displayName || '사용자';
         showToast(`환영합니다, ${welcomeName}님! 🎉`);
+
+        // 포스트 작성 탭이 열려 있으면 강제로 리렌더링
+        if (document.querySelector('.nav-btn[data-tab="create"]').classList.contains('active')) {
+            await switchTab('create');
+        }
         
     } catch (error) {
         console.error('Google 로그인 실패:', error);
