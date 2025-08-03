@@ -286,8 +286,83 @@ async function switchTab(tabName) {
             // 로그인된 상태: 원래 작성 폼 복원
             const createTab = document.getElementById('create-tab');
             if (createTab && createTab.innerHTML.includes('로그인이 필요합니다')) {
-                // 페이지를 새로고침하여 원래 폼 복원
-                location.reload();
+                // 원래 폼으로 복원
+                createTab.innerHTML = `
+                    <div class="create-post-form">
+                        <h2>새 포스트 작성</h2>
+                        <form id="post-form">
+                            <div class="form-group">
+                                <label for="player-name">선수 이름</label>
+                                <input type="text" id="player-name" required placeholder="예: 손흥민">
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="post-title">제목</label>
+                                <input type="text" id="post-title" required placeholder="포스트 제목을 입력하세요">
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="post-content">내용</label>
+                                <textarea id="post-content" required placeholder="선수에 대한 생각이나 의견을 자유롭게 작성해주세요..."></textarea>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="post-image">이미지 (선택사항)</label>
+                                <input type="file" id="post-image" accept="image/*">
+                                <div id="image-preview" class="image-preview"></div>
+                                <div class="upload-progress" id="upload-progress" style="display: none;">
+                                    <div class="progress-bar">
+                                        <div class="progress-fill" id="progress-fill"></div>
+                                    </div>
+                                    <span id="progress-text">업로드 중...</span>
+                                </div>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="post-tags">태그 (쉼표로 구분)</label>
+                                <input type="text" id="post-tags" placeholder="예: 프리미어리그, 토트넘, 윙어">
+                                <div class="tag-suggestions" id="tag-suggestions"></div>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="author-name">작성자</label>
+                                <input type="text" id="author-name" required placeholder="닉네임을 입력하세요">
+                            </div>
+                            
+                            <button type="submit" class="submit-btn" id="submit-btn">
+                                <span class="btn-text">포스트 작성</span>
+                                <span class="btn-loading" style="display: none;">📡 업로드 중...</span>
+                            </button>
+                        </form>
+                    </div>
+                `;
+                
+                // 폼 이벤트 리스너 다시 설정
+                const newPostForm = document.getElementById('post-form');
+                if (newPostForm) {
+                    newPostForm.addEventListener('submit', handlePostSubmit);
+                }
+                
+                // 이미지 업로드 이벤트 리스너 다시 설정
+                const newPostImageInput = document.getElementById('post-image');
+                if (newPostImageInput) {
+                    newPostImageInput.addEventListener('change', handleImageUpload);
+                }
+                
+                // 태그 입력 이벤트 리스너 다시 설정
+                const newPostTagsInput = document.getElementById('post-tags');
+                if (newPostTagsInput) {
+                    newPostTagsInput.addEventListener('input', handleTagInput);
+                }
+                
+                // 작성자 필드 자동 채우기
+                const authorInput = document.getElementById('author-name');
+                if (authorInput && window.currentUser) {
+                    const displayName = (userProfile && userProfile.nickname) || window.currentUser.displayName || '사용자';
+                    authorInput.value = displayName;
+                    authorInput.readOnly = true;
+                    authorInput.style.backgroundColor = '#f5f5f5';
+                }
             }
         }
     }
@@ -307,6 +382,8 @@ async function handlePostSubmit(e) {
     // 인증된 사용자 확인 (window.currentUser에서 직접 확인)
     if (!window.currentUser || !window.currentUser.uid) {
         showToast('포스트를 작성하려면 로그인이 필요합니다!');
+        // 포스트 작성 탭으로 이동하여 로그인 프롬프트 표시
+        await switchTab('create');
         return;
     }
     
@@ -1122,6 +1199,9 @@ async function handleGoogleLogin() {
             await switchTab('create');
         }
         
+        // 로그인 후 포스트 작성 탭으로 자동 이동 (선택사항)
+        // await switchTab('create');
+        
     } catch (error) {
         console.error('Google 로그인 실패:', error);
         
@@ -1283,6 +1363,7 @@ function initializeAuth() {
                 displayName: user.displayName,
                 photoURL: user.photoURL
             };
+            window.currentUser = currentUser; // window.currentUser도 설정
             
             // 사용자 정보를 Firebase에 저장
             await saveUserToDatabase(currentUser);
@@ -1305,6 +1386,7 @@ function initializeAuth() {
             // 로그아웃된 상태
             console.log('🔓 사용자 로그아웃 감지');
             currentUser = null;
+            window.currentUser = null; // window.currentUser도 초기화
             
             // 프로필 정보는 초기화하지 않음 (다음 로그인 시 재사용)
             // userProfile은 그대로 유지
@@ -1316,6 +1398,11 @@ function initializeAuth() {
         // 프로필 탭이 활성화되어 있다면 업데이트
         if (document.querySelector('.nav-btn[data-tab="profile"]').classList.contains('active')) {
             await updateProfileTab();
+        }
+        
+        // 포스트 작성 탭이 활성화되어 있다면 업데이트
+        if (document.querySelector('.nav-btn[data-tab="create"]').classList.contains('active')) {
+            await switchTab('create');
         }
         
         console.log('🔄 인증 UI 업데이트 완료');

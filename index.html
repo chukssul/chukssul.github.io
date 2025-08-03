@@ -3,11 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate, max-age=0">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
+    <meta http-equiv="Last-Modified" content="0">
     <title>축썰닷컴</title>
-    <link rel="stylesheet" href="css/styles.css?v=2.0">
+    <link rel="stylesheet" href="css/styles.css?v=2.1">
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
 </head>
 <body>
@@ -201,7 +202,7 @@
         // Service Worker 등록
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('/sw.js?v=2.0')
+                navigator.serviceWorker.register('/sw.js?v=2.1')
                     .then(registration => {
                         console.log('✅ Service Worker 등록 성공:', registration.scope);
                         
@@ -224,11 +225,24 @@
             if ('caches' in window) {
                 caches.keys().then(cacheNames => {
                     cacheNames.forEach(cacheName => {
-                        if (cacheName !== 'chukssul-v2.0') {
+                        if (cacheName !== 'chukssul-v2.1') {
                             caches.delete(cacheName);
                             console.log('🗑️ 이전 캐시 삭제:', cacheName);
                         }
                     });
+                });
+            }
+            
+            // 브라우저 캐시 강제 새로고침
+            if (performance.navigation.type === 1) { // 새로고침
+                console.log('🔄 새로고침 감지 - 강제 캐시 정리');
+                // 모든 리소스 강제 새로고침
+                const links = document.querySelectorAll('link[rel="stylesheet"]');
+                links.forEach(link => {
+                    const href = link.getAttribute('href');
+                    if (href) {
+                        link.setAttribute('href', href.split('?')[0] + '?v=' + Date.now());
+                    }
                 });
             }
         });
@@ -270,8 +284,8 @@
         console.log('🔐 구글 OAuth 클라이언트 ID 설정 완료!');
     </script>
     
-    <script src="js/cloudinary-storage.js?v=2.0"></script>
-    <script type="module" src="js/firebase-realtime.js?v=2.0"></script>
-    <script src="js/script.js?v=2.0"></script>
+    <script src="js/cloudinary-storage.js?v=2.1"></script>
+    <script type="module" src="js/firebase-realtime.js?v=2.1"></script>
+    <script src="js/script.js?v=2.1"></script>
 </body>
 </html> 

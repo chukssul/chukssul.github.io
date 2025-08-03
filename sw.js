@@ -1,5 +1,5 @@
 // Service Worker for 캐시 제어
-const CACHE_NAME = 'chukssul-v2.0';
+const CACHE_NAME = 'chukssul-v2.1';
 const urlsToCache = [
   '/',
   '/css/styles.css',
@@ -46,10 +46,10 @@ self.addEventListener('activate', event => {
 
 // 네트워크 요청 가로채기
 self.addEventListener('fetch', event => {
-  // HTML 페이지는 항상 네트워크에서 가져오기
+  // HTML 페이지는 항상 네트워크에서 가져오기 (캐시 방지)
   if (event.request.url.includes('.html') || event.request.url.endsWith('/')) {
     event.respondWith(
-      fetch(event.request)
+      fetch(event.request, { cache: 'no-store' })
         .then(response => {
           // 응답을 캐시에 저장하지 않음
           return response;
@@ -62,17 +62,17 @@ self.addEventListener('fetch', event => {
     return;
   }
 
-  // CSS, JS 파일은 캐시 우선 전략 사용
+  // CSS, JS 파일은 네트워크 우선 전략 사용 (캐시 방지)
   if (event.request.url.includes('.css') || event.request.url.includes('.js')) {
     event.respondWith(
-      caches.match(event.request)
+      fetch(event.request, { cache: 'no-store' })
         .then(response => {
-          // 캐시에 있으면 캐시에서 반환
-          if (response) {
-            return response;
-          }
-          // 캐시에 없으면 네트워크에서 가져오기
-          return fetch(event.request);
+          // 네트워크에서 가져온 최신 파일 반환
+          return response;
+        })
+        .catch(() => {
+          // 네트워크 실패 시에만 캐시에서 가져오기
+          return caches.match(event.request);
         })
     );
     return;
@@ -80,7 +80,7 @@ self.addEventListener('fetch', event => {
 
   // 기타 리소스는 네트워크 우선 전략 사용
   event.respondWith(
-    fetch(event.request)
+    fetch(event.request, { cache: 'no-store' })
       .then(response => {
         return response;
       })
