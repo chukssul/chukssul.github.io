@@ -126,10 +126,14 @@ class PlayerCommunityApp {
             const postsRef = ref(this.database, 'posts');
             const newPostRef = push(postsRef);
             
+            // 현재 로그인된 사용자의 UID 가져오기
+            const currentUserUid = window.currentUser ? window.currentUser.uid : this.currentUser;
+            
             const post = {
                 ...postData,
                 image: imageUrl,
-                userId: this.currentUser,
+                userId: currentUserUid,
+                authorId: currentUserUid, // 추가: 작성자 ID
                 timestamp: serverTimestamp(),
                 likes: 0,
                 dislikes: 0,
@@ -174,6 +178,9 @@ class PlayerCommunityApp {
     // 좋아요/싫어요 토글
     async toggleLike(postId, isLike = true) {
         try {
+            // 현재 로그인된 사용자의 UID 가져오기
+            const currentUserUid = window.currentUser ? window.currentUser.uid : this.currentUser;
+            
             const postRef = ref(this.database, `posts/${postId}`);
             const likeField = isLike ? 'likedBy' : 'dislikedBy';
             const oppositeField = isLike ? 'dislikedBy' : 'likedBy';
@@ -187,21 +194,21 @@ class PlayerCommunityApp {
             if (!post) return;
 
             const updates = {};
-            const userLiked = post[likeField] && post[likeField][this.currentUser];
-            const userDisliked = post[oppositeField] && post[oppositeField][this.currentUser];
+            const userLiked = post[likeField] && post[likeField][currentUserUid];
+            const userDisliked = post[oppositeField] && post[oppositeField][currentUserUid];
 
             // 반대 액션이 있으면 제거
             if (userDisliked) {
-                updates[`${oppositeField}/${this.currentUser}`] = null;
+                updates[`${oppositeField}/${currentUserUid}`] = null;
                 updates[oppositeCountField] = Math.max(0, (post[oppositeCountField] || 0) - 1);
             }
 
             // 현재 액션 토글
             if (userLiked) {
-                updates[`${likeField}/${this.currentUser}`] = null;
+                updates[`${likeField}/${currentUserUid}`] = null;
                 updates[countField] = Math.max(0, (post[countField] || 0) - 1);
             } else {
-                updates[`${likeField}/${this.currentUser}`] = true;
+                updates[`${likeField}/${currentUserUid}`] = true;
                 updates[countField] = (post[countField] || 0) + 1;
             }
 
@@ -220,12 +227,15 @@ class PlayerCommunityApp {
     // 댓글 추가
     async addComment(postId, commentData) {
         try {
+            // 현재 로그인된 사용자의 UID 가져오기
+            const currentUserUid = window.currentUser ? window.currentUser.uid : this.currentUser;
+            
             const commentsRef = ref(this.database, `posts/${postId}/comments`);
             const newCommentRef = push(commentsRef);
             
             const comment = {
                 ...commentData,
-                userId: this.currentUser,
+                userId: currentUserUid,
                 timestamp: serverTimestamp()
             };
 
@@ -301,10 +311,13 @@ class PlayerCommunityApp {
 
     // 포스트 HTML 생성
     createPostHTML(post) {
-        const userLiked = post.likedBy && post.likedBy[this.currentUser];
-        const userDisliked = post.dislikedBy && post.dislikedBy[this.currentUser];
+        // 현재 로그인된 사용자의 UID 가져오기
+        const currentUserUid = window.currentUser ? window.currentUser.uid : this.currentUser;
+        
+        const userLiked = post.likedBy && post.likedBy[currentUserUid];
+        const userDisliked = post.dislikedBy && post.dislikedBy[currentUserUid];
         const commentCount = post.comments ? Object.keys(post.comments).length : 0;
-        const isOwner = post.userId === this.currentUser;
+        const isOwner = post.userId === currentUserUid;
 
         return `
             <div class="post-card new-post" onclick="openPostModal('${post.id}')">
@@ -337,10 +350,31 @@ class PlayerCommunityApp {
     // 포스트 삭제
     async deletePost(postId) {
         if (!confirm('정말로 이 포스트를 삭제하시겠습니까?')) return;
+        
         try {
+            // 현재 로그인된 사용자의 UID 가져오기
+            const currentUserUid = window.currentUser ? window.currentUser.uid : this.currentUser;
+            
+            // 포스트 정보 가져오기
             const postRef = ref(this.database, `posts/${postId}`);
+            const snapshot = await get(postRef);
+            const post = snapshot.val();
+            
+            if (!post) {
+                this.showToast('포스트를 찾을 수 없습니다.');
+                return;
+            }
+            
+            // 권한 체크
+            if (post.userId !== currentUserUid) {
+                this.showToast('자신이 작성한 포스트만 삭제할 수 있습니다.');
+                return;
+            }
+            
+            // 포스트 삭제
             await set(postRef, null);
             this.showToast('포스트가 삭제되었습니다.');
+            
         } catch (error) {
             console.error('포스트 삭제 실패:', error);
             this.showToast('포스트 삭제에 실패했습니다.');
@@ -351,6 +385,15 @@ class PlayerCommunityApp {
     openEditPostModal(postId) {
         const post = this.lastPosts && this.lastPosts.find(p => p.id === postId);
         if (!post) return;
+        
+        // 현재 로그인된 사용자의 UID 가져오기
+        const currentUserUid = window.currentUser ? window.currentUser.uid : this.currentUser;
+        
+        // 권한 체크
+        if (post.userId !== currentUserUid) {
+            this.showToast('자신이 작성한 포스트만 수정할 수 있습니다.');
+            return;
+        }
         const modal = document.getElementById('post-modal');
         const modalBody = document.getElementById('modal-body');
         if (!modal || !modalBody) return;
@@ -394,8 +437,28 @@ class PlayerCommunityApp {
         const content = document.getElementById('edit-post-content').value.trim();
         const tagsInput = document.getElementById('edit-post-tags').value.trim();
         const tags = tagsInput ? tagsInput.split(',').map(tag => tag.trim()).filter(tag => tag) : [];
+        
         try {
+            // 현재 로그인된 사용자의 UID 가져오기
+            const currentUserUid = window.currentUser ? window.currentUser.uid : this.currentUser;
+            
+            // 포스트 정보 가져오기
             const postRef = ref(this.database, `posts/${postId}`);
+            const snapshot = await get(postRef);
+            const post = snapshot.val();
+            
+            if (!post) {
+                this.showToast('포스트를 찾을 수 없습니다.');
+                return;
+            }
+            
+            // 권한 체크
+            if (post.userId !== currentUserUid) {
+                this.showToast('자신이 작성한 포스트만 수정할 수 있습니다.');
+                return;
+            }
+            
+            // 포스트 수정
             await update(postRef, { playerName, title, content, tags });
             this.showToast('포스트가 수정되었습니다.');
             document.getElementById('post-modal').style.display = 'none';
