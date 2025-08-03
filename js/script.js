@@ -983,6 +983,8 @@ async function loadProfile() {
         
         // Firebase에서 사용자 프로필 데이터 가져오기 (users 경로 사용)
         const userProfileRef = ref(window.database, `users/${currentUser.uid}/profile`);
+        console.log('🔍 프로필 조회 경로:', `users/${currentUser.uid}/profile`);
+        
         const snapshot = await get(userProfileRef);
         
         if (snapshot.exists()) {
@@ -998,6 +1000,10 @@ async function loadProfile() {
             };
             
             console.log('✅ Firebase에서 프로필 로드 완료:', userProfile);
+            
+            // localStorage에 백업 저장
+            localStorage.setItem('userProfile', JSON.stringify(userProfile));
+            console.log('💾 프로필을 localStorage에 백업 저장');
         } else {
             // Firebase에 프로필이 없으면 빈 프로필로 초기화
             console.log('ℹ️ Firebase에 프로필이 없어 빈 프로필로 초기화');
@@ -1119,11 +1125,21 @@ async function saveProfile() {
             bio: userProfile.bio,
             favoriteTeam: userProfile.favoriteTeam,
             avatar: userProfile.avatar,
-            updatedAt: serverTimestamp()
+            updatedAt: serverTimestamp(),
+            userId: currentUser.uid,
+            email: currentUser.email
         };
         
         console.log('🔥 Firebase에 저장할 데이터:', profileData);
         await set(userProfileRef, profileData);
+        
+        // 저장 후 즉시 다시 로드하여 확인
+        const snapshot = await get(userProfileRef);
+        if (snapshot.exists()) {
+            console.log('✅ 프로필 저장 확인됨:', snapshot.val());
+        } else {
+            console.error('❌ 프로필 저장 실패 - 데이터가 없음');
+        }
         
         console.log('✅ 프로필이 Firebase에 저장되었습니다.');
         
@@ -1407,8 +1423,15 @@ async function updateProfileTab() {
         loginRequired.style.display = 'none';
         profileContent.style.display = 'block';
         
+        console.log('🔄 프로필 탭 업데이트 시작');
+        
         // 사용자 프로필 정보 로드
         await loadProfile();
+        
+        // UI 업데이트 강제 실행
+        updateProfileUI();
+        
+        console.log('✅ 프로필 탭 업데이트 완료');
         
     } else {
         // 로그인되지 않은 경우 로그인 프롬프트 표시
