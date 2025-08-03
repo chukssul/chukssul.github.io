@@ -44,6 +44,15 @@ const profileElements = {
 let app = null;
 
 document.addEventListener('DOMContentLoaded', async function() {
+    // 캐시 방지 - 페이지 로드 시 강제 새로고침
+    if (performance.navigation.type === 1) { // 새로고침
+        console.log('🔄 새로고침 감지 - 캐시 정리 중...');
+        // 로컬 스토리지의 이전 데이터 정리
+        localStorage.removeItem('posts');
+        localStorage.removeItem('userProfile');
+        console.log('✅ 이전 데이터 정리 완료');
+    }
+    
     // 이벤트 리스너 설정 (Firebase 의존하지 않는 기본 기능)
     setupEventListeners();
     
