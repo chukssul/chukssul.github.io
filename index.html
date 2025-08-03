@@ -257,7 +257,17 @@
         window.auth = getAuth(app);
         window.googleProvider = new GoogleAuthProvider();
         
+        // 구글 OAuth 클라이언트 ID 설정
+        window.googleProvider.setCustomParameters({
+            client_id: '470756198653-9rvmefcpf1gaei0hp9opbadkqh3rgj6n.apps.googleusercontent.com'
+        });
+        
+        // 추가 스코프 설정 (필요한 경우)
+        window.googleProvider.addScope('email');
+        window.googleProvider.addScope('profile');
+        
         console.log('🔥 Firebase 초기화 완료!');
+        console.log('🔐 구글 OAuth 클라이언트 ID 설정 완료!');
     </script>
     
     <script src="js/cloudinary-storage.js?v=2.0"></script>

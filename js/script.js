@@ -880,8 +880,20 @@ setTimeout(() => {
 // 인증 관련 함수들
 async function handleGoogleLogin() {
     try {
+        // 로그인 버튼 비활성화
+        const loginButtons = [loginBtn, profileLoginBtn];
+        loginButtons.forEach(btn => {
+            if (btn) {
+                btn.disabled = true;
+                btn.textContent = '로그인 중...';
+            }
+        });
+        
+        console.log('🔐 구글 로그인 시작...');
         const result = await signInWithPopup(window.auth, window.googleProvider);
         const user = result.user;
+        
+        console.log('✅ 구글 로그인 성공:', user.email);
         
         // 사용자 정보 저장
         currentUser = {
@@ -902,18 +914,47 @@ async function handleGoogleLogin() {
             updateProfileTab();
         }
         
-        showToast('구글 로그인이 완료되었습니다! 🎉');
+        showToast(`환영합니다, ${user.displayName}님! 🎉`);
         
     } catch (error) {
         console.error('Google 로그인 실패:', error);
-        showToast('로그인에 실패했습니다. 다시 시도해주세요.');
+        
+        // 에러 메시지 개선
+        let errorMessage = '로그인에 실패했습니다. 다시 시도해주세요.';
+        
+        if (error.code === 'auth/popup-closed-by-user') {
+            errorMessage = '로그인 창이 닫혔습니다. 다시 시도해주세요.';
+        } else if (error.code === 'auth/popup-blocked') {
+            errorMessage = '팝업이 차단되었습니다. 팝업 차단을 해제해주세요.';
+        } else if (error.code === 'auth/network-request-failed') {
+            errorMessage = '네트워크 오류가 발생했습니다. 인터넷 연결을 확인해주세요.';
+        }
+        
+        showToast(errorMessage);
+        
+    } finally {
+        // 로그인 버튼 다시 활성화
+        const loginButtons = [loginBtn, profileLoginBtn];
+        loginButtons.forEach(btn => {
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = '<span class="auth-icon">🔑</span>구글로 로그인';
+            }
+        });
     }
 }
 
 async function handleLogout() {
     try {
+        // 로그아웃 버튼 비활성화
+        logoutBtn.disabled = true;
+        logoutBtn.textContent = '로그아웃 중...';
+        
+        console.log('🔓 로그아웃 시작...');
         await signOut(window.auth);
         currentUser = null;
+        
+        console.log('✅ 로그아웃 완료');
         
         // UI 업데이트
         updateAuthUI();
@@ -923,36 +964,53 @@ async function handleLogout() {
             updateProfileTab();
         }
         
-        showToast('로그아웃되었습니다.');
+        showToast('안전하게 로그아웃되었습니다. 👋');
         
     } catch (error) {
         console.error('로그아웃 실패:', error);
-        showToast('로그아웃에 실패했습니다.');
+        showToast('로그아웃에 실패했습니다. 다시 시도해주세요.');
+        
+    } finally {
+        // 로그아웃 버튼 다시 활성화
+        logoutBtn.disabled = false;
+        logoutBtn.textContent = '로그아웃';
     }
 }
 
 async function saveUserToDatabase(user) {
     try {
+        console.log('💾 사용자 정보 저장 시작:', user.email);
+        
         const userRef = ref(window.database, `users/${user.uid}`);
         await set(userRef, {
             email: user.email,
             displayName: user.displayName,
             photoURL: user.photoURL,
             createdAt: serverTimestamp(),
-            lastLogin: serverTimestamp()
+            lastLogin: serverTimestamp(),
+            updatedAt: serverTimestamp()
         });
+        
         console.log('✅ 사용자 정보가 Firebase에 저장되었습니다.');
+        
     } catch (error) {
-        console.error('사용자 정보 저장 실패:', error);
+        console.error('❌ 사용자 정보 저장 실패:', error);
+        // 에러가 발생해도 앱은 계속 작동하도록 함
     }
 }
 
 function updateAuthUI() {
     if (currentUser) {
         // 로그인된 상태
+        console.log('🔄 로그인 상태 UI 업데이트');
+        
         loginBtn.style.display = 'none';
         userInfo.style.display = 'flex';
-        userAvatar.src = currentUser.photoURL || '/images/default-avatar.png';
+        
+        // 사용자 아바타 설정 (기본 이미지 포함)
+        userAvatar.src = currentUser.photoURL || 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPGNpcmNsZSBjeD0iMjAiIGN5PSIyMCIgcj0iMjAiIGZpbGw9IiNFRUVFRUUiLz4KPHBhdGggZD0iTTIwIDEwQzIyLjA5IDEwIDI0IDEyLjA5IDI0IDE0QzI0IDE1LjkxIDIyLjA5IDE4IDIwIDE4QzE3LjkxIDE4IDE2IDE1LjkxIDE2IDE0QzE2IDEyLjA5IDE3LjkxIDEwIDIwIDEwWiIgZmlsbD0iIzk5OTk5OSIvPgo8cGF0aCBkPSJNMjAgMjBDMTYuNjkgMjAgMTQgMjIuNjkgMTQgMjZIMjZDMjYgMjIuNjkgMjMuMzEgMjAgMjAgMjBaIiBmaWxsPSIjOTk5OTk5Ii8+Cjwvc3ZnPgo=';
+        userAvatar.alt = `${currentUser.displayName}의 프로필`;
+        
         userName.textContent = currentUser.displayName || '사용자';
         
         // 포스트 작성 폼의 작성자 필드 자동 채우기
@@ -960,10 +1018,13 @@ function updateAuthUI() {
         if (authorInput) {
             authorInput.value = currentUser.displayName || '';
             authorInput.readOnly = true;
+            authorInput.style.backgroundColor = '#f5f5f5';
         }
         
     } else {
         // 로그아웃된 상태
+        console.log('🔄 로그아웃 상태 UI 업데이트');
+        
         loginBtn.style.display = 'flex';
         userInfo.style.display = 'none';
         
@@ -972,6 +1033,7 @@ function updateAuthUI() {
         if (authorInput) {
             authorInput.value = '';
             authorInput.readOnly = false;
+            authorInput.style.backgroundColor = '';
         }
     }
 }
@@ -994,17 +1056,25 @@ function updateProfileTab() {
 
 // Firebase 인증 상태 감지
 function initializeAuth() {
+    console.log('🔐 인증 상태 감지 시작...');
+    
     onAuthStateChanged(window.auth, (user) => {
         if (user) {
             // 로그인된 상태
+            console.log('✅ 사용자 로그인 감지:', user.email);
             currentUser = {
                 uid: user.uid,
                 email: user.email,
                 displayName: user.displayName,
                 photoURL: user.photoURL
             };
+            
+            // 사용자 정보를 Firebase에 저장
+            saveUserToDatabase(currentUser);
+            
         } else {
             // 로그아웃된 상태
+            console.log('🔓 사용자 로그아웃 감지');
             currentUser = null;
         }
         
@@ -1015,5 +1085,7 @@ function initializeAuth() {
         if (document.querySelector('.nav-btn[data-tab="profile"]').classList.contains('active')) {
             updateProfileTab();
         }
+        
+        console.log('🔄 인증 UI 업데이트 완료');
     });
 } 
