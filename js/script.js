@@ -73,10 +73,9 @@ document.addEventListener('DOMContentLoaded', async function() {
     // 캐시 방지 - 페이지 로드 시 강제 새로고침
     if (performance.navigation.type === 1) { // 새로고침
         console.log('🔄 새로고침 감지 - 캐시 정리 중...');
-        // 로컬 스토리지의 이전 데이터 정리
+        // 로컬 스토리지의 이전 데이터 정리 (프로필 정보는 유지)
         localStorage.removeItem('posts');
-        localStorage.removeItem('userProfile');
-        console.log('✅ 이전 데이터 정리 완료');
+        console.log('✅ 이전 데이터 정리 완료 (프로필 정보 유지)');
     }
     
     // 이벤트 리스너 설정 (Firebase 의존하지 않는 기본 기능)
@@ -850,20 +849,14 @@ async function loadProfile() {
             };
             console.log('✅ Firebase에서 프로필 로드 완료:', userProfile);
         } else {
-            // Firebase에 프로필이 없으면 기본값 사용
-            userProfile = {
-                nickname: '',
-                bio: '',
-                favoriteTeam: '',
-                avatar: ''
-            };
-            console.log('ℹ️ Firebase에 프로필이 없어 기본값 사용');
+            // Firebase에 프로필이 없으면 기존 userProfile 유지 (초기화하지 않음)
+            console.log('ℹ️ Firebase에 프로필이 없어 기존 프로필 정보 유지');
         }
         
         // UI에 프로필 정보 표시
-        profileElements.nickname.value = userProfile.nickname;
-        profileElements.bio.value = userProfile.bio;
-        profileElements.favoriteTeam.value = userProfile.favoriteTeam;
+        profileElements.nickname.value = userProfile.nickname || '';
+        profileElements.bio.value = userProfile.bio || '';
+        profileElements.favoriteTeam.value = userProfile.favoriteTeam || '';
         
         if (userProfile.avatar) {
             profileElements.avatarPreview.innerHTML = `<img src="${userProfile.avatar}" alt="프로필 이미지">`;
@@ -883,6 +876,26 @@ async function loadProfile() {
             code: error.code,
             stack: error.stack
         });
+        
+        // 에러가 발생해도 기존 프로필 정보는 유지
+        console.log('⚠️ 프로필 로드 실패했지만 기존 정보 유지:', userProfile);
+        
+        // UI에 기존 프로필 정보 표시
+        profileElements.nickname.value = userProfile.nickname || '';
+        profileElements.bio.value = userProfile.bio || '';
+        profileElements.favoriteTeam.value = userProfile.favoriteTeam || '';
+        
+        if (userProfile.avatar) {
+            profileElements.avatarPreview.innerHTML = `<img src="${userProfile.avatar}" alt="프로필 이미지">`;
+            profileElements.avatarPreview.style.display = 'block';
+        } else {
+            profileElements.avatarPreview.innerHTML = '';
+            profileElements.avatarPreview.style.display = 'none';
+        }
+        
+        // 헤더 UI 업데이트
+        updateAuthUI();
+        
         showToast(`프로필 로드에 실패했습니다: ${error.message}`);
     }
 }
@@ -932,6 +945,11 @@ async function saveProfile() {
         await set(userProfileRef, profileData);
         
         console.log('✅ 프로필이 Firebase에 저장되었습니다.');
+        
+        // localStorage에도 프로필 정보 저장 (백업용)
+        localStorage.setItem('userProfile', JSON.stringify(userProfile));
+        console.log('💾 프로필이 localStorage에도 저장되었습니다.');
+        
         showToast('프로필이 저장되었습니다!');
         
         // 헤더 UI 업데이트 (새로운 닉네임과 아바타 반영)
@@ -1038,7 +1056,7 @@ async function handleGoogleLogin() {
         }
         
         // 환영 메시지 (설정된 닉네임 우선 사용)
-        const welcomeName = userProfile.nickname || user.displayName || '사용자';
+        const welcomeName = (userProfile && userProfile.nickname) || user.displayName || '사용자';
         showToast(`환영합니다, ${welcomeName}님! 🎉`);
         
     } catch (error) {
@@ -1132,9 +1150,9 @@ function updateAuthUI() {
         loginBtn.style.display = 'none';
         userInfo.style.display = 'flex';
         
-        // 사용자가 설정한 프로필 정보 우선 사용
-        const displayName = userProfile.nickname || currentUser.displayName || '사용자';
-        const displayAvatar = userProfile.avatar || currentUser.photoURL || 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPGNpcmNsZSBjeD0iMjAiIGN5PSIyMCIgcj0iMjAiIGZpbGw9IiNFRUVFRUUiLz4KPHBhdGggZD0iTTIwIDEwQzIyLjA5IDEwIDI0IDEyLjA5IDI0IDE0QzI0IDE1LjkxIDIyLjA5IDE4IDIwIDE4QzE3LjkxIDE4IDE2IDE1LjkxIDE2IDE0QzE2IDEyLjA5IDE3LjkxIDEwIDIwIDEwWiIgZmlsbD0iIzk5OTk5OSIvPgo8cGF0aCBkPSJNMjAgMjBDMTYuNjkgMjAgMTQgMjIuNjkgMTQgMjZIMjZDMjYgMjIuNjkgMjMuMzEgMjAgMjAgMjBaIiBmaWxsPSIjOTk5OTk5Ii8+Cjwvc3ZnPgo=';
+        // 사용자가 설정한 프로필 정보 우선 사용 (안전한 접근)
+        const displayName = (userProfile && userProfile.nickname) || currentUser.displayName || '사용자';
+        const displayAvatar = (userProfile && userProfile.avatar) || currentUser.photoURL || 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPGNpcmNsZSBjeD0iMjAiIGN5PSIyMCIgcj0iMjAiIGZpbGw9IiNFRUVFRUUiLz4KPHBhdGggZD0iTTIwIDEwQzIyLjA5IDEwIDI0IDEyLjA5IDI0IDE0QzI0IDE1LjkxIDIyLjA5IDE4IDIwIDE4QzE3LjkxIDE4IDE2IDE1LjkxIDE2IDE0QzE2IDEyLjA5IDE3LjkxIDEwIDIwIDEwWiIgZmlsbD0iIzk5OTk5OSIvPgo8cGF0aCBkPSJNMjAgMjBDMTYuNjkgMjAgMTQgMjIuNjkgMTQgMjZIMjZDMjYgMjIuNjkgMjMuMzEgMjAgMjAgMjBaIiBmaWxsPSIjOTk5OTk5Ii8+Cjwvc3ZnPgo=';
         
         // 사용자 아바타 설정
         userAvatar.src = displayAvatar;
@@ -1210,13 +1228,8 @@ function initializeAuth() {
             console.log('🔓 사용자 로그아웃 감지');
             currentUser = null;
             
-            // 프로필 정보 초기화
-            userProfile = {
-                nickname: '',
-                bio: '',
-                favoriteTeam: '',
-                avatar: ''
-            };
+            // 프로필 정보는 초기화하지 않음 (다음 로그인 시 재사용)
+            // userProfile은 그대로 유지
         }
         
         // UI 업데이트
