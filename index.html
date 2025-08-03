@@ -271,9 +271,10 @@
         window.auth = getAuth(app);
         window.googleProvider = new GoogleAuthProvider();
         
-        // 구글 OAuth 클라이언트 ID 설정
+        // 구글 OAuth 설정 (GitHub Pages 전용)
         window.googleProvider.setCustomParameters({
-            client_id: '470756198653-9rvmefcpf1gaei0hp9opbadkqh3rgj6n.apps.googleusercontent.com'
+            client_id: '470756198653-9rvmefcpf1gaei0hp9opbadkqh3rgj6n.apps.googleusercontent.com',
+            prompt: 'select_account'
         });
         
         // 추가 스코프 설정
