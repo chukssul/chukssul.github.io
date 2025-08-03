@@ -836,8 +836,8 @@ async function loadProfile() {
     try {
         console.log('📂 사용자 프로필 로드 시작:', currentUser.uid);
         
-        // Firebase에서 사용자 프로필 데이터 가져오기
-        const userProfileRef = ref(window.database, `userProfiles/${currentUser.uid}`);
+        // Firebase에서 사용자 프로필 데이터 가져오기 (users 경로 사용)
+        const userProfileRef = ref(window.database, `users/${currentUser.uid}/profile`);
         const snapshot = await get(userProfileRef);
         
         if (snapshot.exists()) {
@@ -918,8 +918,8 @@ async function saveProfile() {
         
         console.log('📝 수집된 프로필 데이터:', userProfile);
         
-        // Firebase에 프로필 저장
-        const userProfileRef = ref(window.database, `userProfiles/${currentUser.uid}`);
+        // Firebase에 프로필 저장 (users 경로 사용)
+        const userProfileRef = ref(window.database, `users/${currentUser.uid}/profile`);
         const profileData = {
             nickname: userProfile.nickname,
             bio: userProfile.bio,
