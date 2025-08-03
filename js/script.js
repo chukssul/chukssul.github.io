@@ -262,7 +262,10 @@ async function switchTab(tabName) {
     
     // 포스트 작성 탭 접근 시 인증 체크
     if (tabName === 'create') {
-        if (!currentUser) {
+        // 현재 로그인 상태를 window.currentUser에서 직접 확인
+        const isLoggedIn = window.currentUser && window.currentUser.uid;
+        
+        if (!isLoggedIn) {
             // 작성 폼 숨기고 안내 메시지 표시
             const createTab = document.getElementById('create-tab');
             if (createTab) {
@@ -280,9 +283,12 @@ async function switchTab(tabName) {
                 document.getElementById('create-login-btn').onclick = handleGoogleLogin;
             }
         } else {
-            // 새로고침 또는 탭 리렌더링 시 원래 작성 폼 복원
-            // location.reload() 또는 별도 리렌더링 로직이 있으면 정상 동작
-            // 아무것도 하지 않아도 기존 폼이 보임
+            // 로그인된 상태: 원래 작성 폼 복원
+            const createTab = document.getElementById('create-tab');
+            if (createTab && createTab.innerHTML.includes('로그인이 필요합니다')) {
+                // 페이지를 새로고침하여 원래 폼 복원
+                location.reload();
+            }
         }
     }
 }
@@ -298,8 +304,8 @@ async function handlePostSubmit(e) {
     const tagsInput = document.getElementById('post-tags').value.trim();
     const imageFile = document.getElementById('post-image').files[0];
     
-    // 인증된 사용자 확인
-    if (!currentUser) {
+    // 인증된 사용자 확인 (window.currentUser에서 직접 확인)
+    if (!window.currentUser || !window.currentUser.uid) {
         showToast('포스트를 작성하려면 로그인이 필요합니다!');
         return;
     }
@@ -1091,6 +1097,7 @@ async function handleGoogleLogin() {
             displayName: user.displayName,
             photoURL: user.photoURL
         };
+        window.currentUser = currentUser; // window.currentUser도 설정
         
         // Firebase에 사용자 정보 저장
         await saveUserToDatabase(currentUser);
@@ -1152,6 +1159,7 @@ async function handleLogout() {
         console.log('🔓 로그아웃 시작...');
         await signOut(window.auth);
         currentUser = null;
+        window.currentUser = null; // window.currentUser도 초기화
         
         console.log('✅ 로그아웃 완료');
         
@@ -1199,7 +1207,10 @@ async function saveUserToDatabase(user) {
 }
 
 function updateAuthUI() {
-    if (currentUser) {
+    // window.currentUser를 우선 사용
+    const user = window.currentUser || currentUser;
+    
+    if (user) {
         // 로그인된 상태
         console.log('🔄 로그인 상태 UI 업데이트');
         
@@ -1207,8 +1218,8 @@ function updateAuthUI() {
         userInfo.style.display = 'flex';
         
         // 사용자가 설정한 프로필 정보 우선 사용 (안전한 접근)
-        const displayName = (userProfile && userProfile.nickname) || currentUser.displayName || '사용자';
-        const displayAvatar = (userProfile && userProfile.avatar) || currentUser.photoURL || 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPGNpcmNsZSBjeD0iMjAiIGN5PSIyMCIgcj0iMjAiIGZpbGw9IiNFRUVFRUUiLz4KPHBhdGggZD0iTTIwIDEwQzIyLjA5IDEwIDI0IDEyLjA5IDI0IDE0QzI0IDE1LjkxIDIyLjA5IDE4IDIwIDE4QzE3LjkxIDE4IDE2IDE1LjkxIDE2IDE0QzE2IDEyLjA5IDE3LjkxIDEwIDIwIDEwWiIgZmlsbD0iIzk5OTk5OSIvPgo8cGF0aCBkPSJNMjAgMjBDMTYuNjkgMjAgMTQgMjIuNjkgMTQgMjZIMjZDMjYgMjIuNjkgMjMuMzEgMjAgMjAgMjBaIiBmaWxsPSIjOTk5OTk5Ii8+Cjwvc3ZnPgo=';
+        const displayName = (userProfile && userProfile.nickname) || user.displayName || '사용자';
+        const displayAvatar = (userProfile && userProfile.avatar) || user.photoURL || 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPGNpcmNsZSBjeD0iMjAiIGN5PSIyMCIgcj0iMjAiIGZpbGw9IiNFRUVFRUUiLz4KPHBhdGggZD0iTTIwIDEwQzIyLjA5IDEwIDI0IDEyLjA5IDI0IDE0QzI0IDE1LjkxIDIyLjA5IDE4IDIwIDE4QzE3LjkxIDE4IDE2IDE1LjkxIDE2IDE0QzE2IDEyLjA5IDE3LjkxIDEwIDIwIDEwWiIgZmlsbD0iIzk5OTk5OSIvPgo8cGF0aCBkPSJNMjAgMjBDMTYuNjkgMjAgMTQgMjIuNjkgMTQgMjZIMjZDMjYgMjIuNjkgMjMuMzEgMjAgMjAgMjBaIiBmaWxsPSIjOTk5OTk5Ii8+Cjwvc3ZnPgo=';
         
         // 사용자 아바타 설정
         userAvatar.src = displayAvatar;
