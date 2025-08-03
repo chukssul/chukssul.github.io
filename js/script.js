@@ -9,6 +9,9 @@ let userProfile = JSON.parse(localStorage.getItem('userProfile')) || {
 };
 let commonTags = ['프리미어리그', '라리가', '세리에A', '분데스리가', '리그1', '한국축구', '월드컵', '유로', '챔피언스리그', '토트넘', '맨유', '맨시티', '아스날', '첼시', '리버풀', '바르셀로나', '레알마드리드', '유벤투스', 'AC밀란', '인터밀란', '바이에른뮌헨', 'PSG'];
 
+// 인증 관련 변수
+let currentUser = null;
+
 // DOM 요소들
 const navBtns = document.querySelectorAll('.nav-btn');
 const tabContents = document.querySelectorAll('.tab-content');
@@ -28,6 +31,16 @@ const postImageInput = document.getElementById('post-image');
 const imagePreview = document.getElementById('image-preview');
 const postTagsInput = document.getElementById('post-tags');
 const tagSuggestions = document.getElementById('tag-suggestions');
+
+// 인증 관련 DOM 요소들
+const loginBtn = document.getElementById('login-btn');
+const logoutBtn = document.getElementById('logout-btn');
+const userInfo = document.getElementById('user-info');
+const userAvatar = document.getElementById('user-avatar');
+const userName = document.getElementById('user-name');
+const profileLoginBtn = document.getElementById('profile-login-btn');
+const loginRequired = document.getElementById('login-required');
+const profileContent = document.getElementById('profile-content');
 const profileElements = {
     nickname: document.getElementById('profile-nickname'),
     avatar: document.getElementById('profile-avatar'),
@@ -44,6 +57,18 @@ const profileElements = {
 let app = null;
 
 document.addEventListener('DOMContentLoaded', async function() {
+    // Firebase 모듈 import
+    const { ref, set, serverTimestamp } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js');
+    const { signInWithPopup, signOut, onAuthStateChanged } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js');
+    
+    // 전역 변수로 설정
+    window.ref = ref;
+    window.set = set;
+    window.serverTimestamp = serverTimestamp;
+    window.signInWithPopup = signInWithPopup;
+    window.signOut = signOut;
+    window.onAuthStateChanged = onAuthStateChanged;
+    
     // 캐시 방지 - 페이지 로드 시 강제 새로고침
     if (performance.navigation.type === 1) { // 새로고침
         console.log('🔄 새로고침 감지 - 캐시 정리 중...');
@@ -110,6 +135,11 @@ document.addEventListener('DOMContentLoaded', async function() {
         if (app.refreshPosts) {
             app.refreshPosts();
         }
+        
+        // 인증 초기화
+        initializeAuth();
+        console.log('🔐 인증 시스템 초기화 완료!');
+        
     } catch (error) {
         console.warn('⚠️ Firebase 초기화 실패 - 기본 기능만 사용 가능:', error);
     }
@@ -170,6 +200,11 @@ function setupEventListeners() {
     // 프로필 관련
     profileElements.saveBtn.addEventListener('click', saveProfile);
     profileElements.avatar.addEventListener('change', handleAvatarUpload);
+    
+    // 인증 관련
+    loginBtn.addEventListener('click', handleGoogleLogin);
+    logoutBtn.addEventListener('click', handleLogout);
+    profileLoginBtn.addEventListener('click', handleGoogleLogin);
 }
 
 function switchTab(tabName) {
@@ -203,6 +238,11 @@ function switchTab(tabName) {
             displayPosts(sortedPosts);
         }
     }
+    
+    // 프로필 탭으로 이동할 때 인증 상태 확인
+    if (tabName === 'profile') {
+        updateProfileTab();
+    }
 }
 
 // 포스트 작성 처리
@@ -216,7 +256,13 @@ async function handlePostSubmit(e) {
     const tagsInput = document.getElementById('post-tags').value.trim();
     const imageFile = document.getElementById('post-image').files[0];
     
-    if (!playerName || !title || !content || !author) {
+    // 인증된 사용자 확인
+    if (!currentUser) {
+        showToast('포스트를 작성하려면 로그인이 필요합니다!');
+        return;
+    }
+    
+    if (!playerName || !title || !content) {
         showToast('모든 필수 필드를 입력해주세요!');
         return;
     }
@@ -243,7 +289,9 @@ async function handlePostSubmit(e) {
             playerName,
             title,
             content,
-            author,
+            author: currentUser.displayName || author,
+            authorId: currentUser.uid,
+            authorEmail: currentUser.email,
             tags,
             image: imageUrl,
             date: new Date().toISOString(),
@@ -827,4 +875,145 @@ setTimeout(() => {
     console.log('');
     console.log('⚙️ 다른 Cloud Name 사용하려면:');
     console.log('setCloudinaryConfig("YOUR_CLOUD_NAME")');
-}, 1000); 
+}, 1000);
+
+// 인증 관련 함수들
+async function handleGoogleLogin() {
+    try {
+        const result = await signInWithPopup(window.auth, window.googleProvider);
+        const user = result.user;
+        
+        // 사용자 정보 저장
+        currentUser = {
+            uid: user.uid,
+            email: user.email,
+            displayName: user.displayName,
+            photoURL: user.photoURL
+        };
+        
+        // Firebase에 사용자 정보 저장
+        await saveUserToDatabase(currentUser);
+        
+        // UI 업데이트
+        updateAuthUI();
+        
+        // 프로필 탭이 활성화되어 있다면 프로필 내용 표시
+        if (document.querySelector('.nav-btn[data-tab="profile"]').classList.contains('active')) {
+            updateProfileTab();
+        }
+        
+        showToast('구글 로그인이 완료되었습니다! 🎉');
+        
+    } catch (error) {
+        console.error('Google 로그인 실패:', error);
+        showToast('로그인에 실패했습니다. 다시 시도해주세요.');
+    }
+}
+
+async function handleLogout() {
+    try {
+        await signOut(window.auth);
+        currentUser = null;
+        
+        // UI 업데이트
+        updateAuthUI();
+        
+        // 프로필 탭이 활성화되어 있다면 로그인 프롬프트 표시
+        if (document.querySelector('.nav-btn[data-tab="profile"]').classList.contains('active')) {
+            updateProfileTab();
+        }
+        
+        showToast('로그아웃되었습니다.');
+        
+    } catch (error) {
+        console.error('로그아웃 실패:', error);
+        showToast('로그아웃에 실패했습니다.');
+    }
+}
+
+async function saveUserToDatabase(user) {
+    try {
+        const userRef = ref(window.database, `users/${user.uid}`);
+        await set(userRef, {
+            email: user.email,
+            displayName: user.displayName,
+            photoURL: user.photoURL,
+            createdAt: serverTimestamp(),
+            lastLogin: serverTimestamp()
+        });
+        console.log('✅ 사용자 정보가 Firebase에 저장되었습니다.');
+    } catch (error) {
+        console.error('사용자 정보 저장 실패:', error);
+    }
+}
+
+function updateAuthUI() {
+    if (currentUser) {
+        // 로그인된 상태
+        loginBtn.style.display = 'none';
+        userInfo.style.display = 'flex';
+        userAvatar.src = currentUser.photoURL || '/images/default-avatar.png';
+        userName.textContent = currentUser.displayName || '사용자';
+        
+        // 포스트 작성 폼의 작성자 필드 자동 채우기
+        const authorInput = document.getElementById('author-name');
+        if (authorInput) {
+            authorInput.value = currentUser.displayName || '';
+            authorInput.readOnly = true;
+        }
+        
+    } else {
+        // 로그아웃된 상태
+        loginBtn.style.display = 'flex';
+        userInfo.style.display = 'none';
+        
+        // 포스트 작성 폼의 작성자 필드 초기화
+        const authorInput = document.getElementById('author-name');
+        if (authorInput) {
+            authorInput.value = '';
+            authorInput.readOnly = false;
+        }
+    }
+}
+
+function updateProfileTab() {
+    if (currentUser) {
+        // 로그인된 경우 프로필 내용 표시
+        loginRequired.style.display = 'none';
+        profileContent.style.display = 'block';
+        
+        // 기존 프로필 정보 로드
+        loadProfile();
+        
+    } else {
+        // 로그인되지 않은 경우 로그인 프롬프트 표시
+        loginRequired.style.display = 'block';
+        profileContent.style.display = 'none';
+    }
+}
+
+// Firebase 인증 상태 감지
+function initializeAuth() {
+    onAuthStateChanged(window.auth, (user) => {
+        if (user) {
+            // 로그인된 상태
+            currentUser = {
+                uid: user.uid,
+                email: user.email,
+                displayName: user.displayName,
+                photoURL: user.photoURL
+            };
+        } else {
+            // 로그아웃된 상태
+            currentUser = null;
+        }
+        
+        // UI 업데이트
+        updateAuthUI();
+        
+        // 프로필 탭이 활성화되어 있다면 업데이트
+        if (document.querySelector('.nav-btn[data-tab="profile"]').classList.contains('active')) {
+            updateProfileTab();
+        }
+    });
+} 

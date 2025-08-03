@@ -20,6 +20,17 @@
                     <button class="nav-btn" data-tab="create">포스트 작성</button>
                     <button class="nav-btn" data-tab="profile">프로필</button>
                 </nav>
+                <div class="auth-controls">
+                    <button id="login-btn" class="auth-btn login-btn" style="display: none;">
+                        <span class="auth-icon">🔑</span>
+                        구글로 로그인
+                    </button>
+                    <div id="user-info" class="user-info" style="display: none;">
+                        <img id="user-avatar" class="user-avatar" src="" alt="프로필">
+                        <span id="user-name" class="user-name"></span>
+                        <button id="logout-btn" class="auth-btn logout-btn">로그아웃</button>
+                    </div>
+                </div>
                 <button class="theme-toggle" id="theme-toggle" title="다크모드 토글">
                     🌙
                 </button>
@@ -108,7 +119,20 @@
 
             <!-- 프로필 탭 -->
             <div id="profile-tab" class="tab-content">
-                <div class="profile-section">
+                <!-- 로그인하지 않은 경우 -->
+                <div id="login-required" class="login-required" style="display: none;">
+                    <div class="login-prompt">
+                        <h2>🔐 로그인이 필요합니다</h2>
+                        <p>프로필을 관리하려면 구글 계정으로 로그인해주세요.</p>
+                        <button id="profile-login-btn" class="auth-btn login-btn large">
+                            <span class="auth-icon">🔑</span>
+                            구글로 로그인
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- 로그인한 경우 -->
+                <div id="profile-content" class="profile-section" style="display: none;">
                     <h2>사용자 프로필</h2>
                     <div class="profile-form">
                         <div class="form-group">
@@ -214,6 +238,7 @@
     <script type="module">
         import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
         import { getDatabase } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js';
+        import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
         
         // Firebase 설정 (실제 프로젝트 설정 완료!)
         const firebaseConfig = {
@@ -229,6 +254,8 @@
         // Firebase 초기화
         const app = initializeApp(firebaseConfig);
         window.database = getDatabase(app);
+        window.auth = getAuth(app);
+        window.googleProvider = new GoogleAuthProvider();
         
         console.log('🔥 Firebase 초기화 완료!');
     </script>
