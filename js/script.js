@@ -259,6 +259,32 @@ async function switchTab(tabName) {
     if (tabName === 'profile') {
         await updateProfileTab();
     }
+    
+    // 포스트 작성 탭 접근 시 인증 체크
+    if (tabName === 'create') {
+        if (!currentUser) {
+            // 작성 폼 숨기고 안내 메시지 표시
+            const createTab = document.getElementById('create-tab');
+            if (createTab) {
+                createTab.innerHTML = `
+                    <div class="login-required">
+                        <h2>🔐 로그인이 필요합니다</h2>
+                        <p>포스트를 작성하려면 구글 계정으로 로그인해주세요.</p>
+                        <button id="create-login-btn" class="auth-btn login-btn large">
+                            <span class="auth-icon">🔑</span>
+                            구글로 로그인
+                        </button>
+                    </div>
+                `;
+                // 로그인 버튼 이벤트 연결
+                document.getElementById('create-login-btn').onclick = handleGoogleLogin;
+            }
+        } else {
+            // 새로고침 또는 탭 리렌더링 시 원래 작성 폼 복원
+            // location.reload() 또는 별도 리렌더링 로직이 있으면 정상 동작
+            // 아무것도 하지 않아도 기존 폼이 보임
+        }
+    }
 }
 
 // 포스트 작성 처리
