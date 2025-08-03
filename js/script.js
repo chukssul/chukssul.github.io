@@ -99,10 +99,10 @@ document.addEventListener('DOMContentLoaded', async function() {
     // 로고 클릭 시 홈으로 이동 (샘플 페이지가 아닌 정상 홈)
     const mainLogo = document.getElementById('main-logo');
     if (mainLogo) {
-        mainLogo.addEventListener('click', function(e) {
+        mainLogo.addEventListener('click', async function(e) {
             e.preventDefault();
             // 홈 탭으로 이동
-            switchTab('home');
+            await switchTab('home');
             
             // Firebase 앱이 있으면 실시간 데이터 새로고침
             if (app && app.refreshPosts) {
@@ -164,7 +164,7 @@ function waitForDependencies() {
 function setupEventListeners() {
     // 탭 네비게이션
     navBtns.forEach(btn => {
-        btn.addEventListener('click', () => switchTab(btn.dataset.tab));
+        btn.addEventListener('click', async () => await switchTab(btn.dataset.tab));
     });
     
     // 포스트 작성 폼
@@ -207,7 +207,7 @@ function setupEventListeners() {
     profileLoginBtn.addEventListener('click', handleGoogleLogin);
 }
 
-function switchTab(tabName) {
+async function switchTab(tabName) {
     // 네비게이션 버튼 활성화
     navBtns.forEach(btn => {
         btn.classList.toggle('active', btn.dataset.tab === tabName);
@@ -241,7 +241,7 @@ function switchTab(tabName) {
     
     // 프로필 탭으로 이동할 때 인증 상태 확인
     if (tabName === 'profile') {
-        updateProfileTab();
+        await updateProfileTab();
     }
 }
 
@@ -317,7 +317,7 @@ async function handlePostSubmit(e) {
         tagSuggestions.innerHTML = '';
         
         // 홈 탭으로 이동
-        switchTab('home');
+        await switchTab('home');
         
         showToast('포스트가 성공적으로 작성되었습니다!');
         
@@ -805,30 +805,100 @@ function handleTagFilter() {
 }
 
 // 프로필 기능
-function loadProfile() {
-    profileElements.nickname.value = userProfile.nickname || '';
-    profileElements.bio.value = userProfile.bio || '';
-    profileElements.favoriteTeam.value = userProfile.favoriteTeam || '';
+async function loadProfile() {
+    if (!currentUser) {
+        console.log('❌ 로그인되지 않은 상태에서 프로필 로드 시도');
+        return;
+    }
     
-    if (userProfile.avatar) {
-        profileElements.avatarPreview.innerHTML = `<img src="${userProfile.avatar}" alt="프로필 이미지">`;
-        profileElements.avatarPreview.style.display = 'block';
+    try {
+        console.log('📂 사용자 프로필 로드 시작:', currentUser.uid);
+        
+        // Firebase에서 사용자 프로필 데이터 가져오기
+        const userProfileRef = ref(window.database, `userProfiles/${currentUser.uid}`);
+        const snapshot = await get(userProfileRef);
+        
+        if (snapshot.exists()) {
+            const firebaseProfile = snapshot.val();
+            userProfile = {
+                nickname: firebaseProfile.nickname || '',
+                bio: firebaseProfile.bio || '',
+                favoriteTeam: firebaseProfile.favoriteTeam || '',
+                avatar: firebaseProfile.avatar || ''
+            };
+            console.log('✅ Firebase에서 프로필 로드 완료');
+        } else {
+            // Firebase에 프로필이 없으면 기본값 사용
+            userProfile = {
+                nickname: '',
+                bio: '',
+                favoriteTeam: '',
+                avatar: ''
+            };
+            console.log('ℹ️ Firebase에 프로필이 없어 기본값 사용');
+        }
+        
+        // UI에 프로필 정보 표시
+        profileElements.nickname.value = userProfile.nickname;
+        profileElements.bio.value = userProfile.bio;
+        profileElements.favoriteTeam.value = userProfile.favoriteTeam;
+        
+        if (userProfile.avatar) {
+            profileElements.avatarPreview.innerHTML = `<img src="${userProfile.avatar}" alt="프로필 이미지">`;
+            profileElements.avatarPreview.style.display = 'block';
+        } else {
+            profileElements.avatarPreview.innerHTML = '';
+            profileElements.avatarPreview.style.display = 'none';
+        }
+        
+        // 헤더 UI 업데이트
+        updateAuthUI();
+        
+    } catch (error) {
+        console.error('❌ 프로필 로드 실패:', error);
+        showToast('프로필 로드에 실패했습니다.');
     }
 }
 
-function saveProfile() {
-    userProfile.nickname = profileElements.nickname.value.trim();
-    userProfile.bio = profileElements.bio.value.trim();
-    userProfile.favoriteTeam = profileElements.favoriteTeam.value.trim();
-    
-    const avatarImg = profileElements.avatarPreview.querySelector('img');
-    if (avatarImg) {
-        userProfile.avatar = avatarImg.src;
+async function saveProfile() {
+    if (!currentUser) {
+        showToast('로그인이 필요합니다.');
+        return;
     }
     
-    localStorage.setItem('userProfile', JSON.stringify(userProfile));
-    showToast('프로필이 저장되었습니다!');
-    updateUserStats();
+    try {
+        console.log('💾 프로필 저장 시작:', currentUser.uid);
+        
+        // 프로필 데이터 수집
+        userProfile.nickname = profileElements.nickname.value.trim();
+        userProfile.bio = profileElements.bio.value.trim();
+        userProfile.favoriteTeam = profileElements.favoriteTeam.value.trim();
+        
+        const avatarImg = profileElements.avatarPreview.querySelector('img');
+        if (avatarImg) {
+            userProfile.avatar = avatarImg.src;
+        }
+        
+        // Firebase에 프로필 저장
+        const userProfileRef = ref(window.database, `userProfiles/${currentUser.uid}`);
+        await set(userProfileRef, {
+            ...userProfile,
+            updatedAt: serverTimestamp()
+        });
+        
+        console.log('✅ 프로필이 Firebase에 저장되었습니다.');
+        showToast('프로필이 저장되었습니다!');
+        
+        // 헤더 UI 업데이트 (새로운 닉네임과 아바타 반영)
+        updateAuthUI();
+        
+        // 사용자 통계 업데이트
+        updateUserStats();
+        
+    } catch (error) {
+        console.error('❌ 프로필 저장 실패:', error);
+        showToast('프로필 저장에 실패했습니다.');
+    }
 }
 
 function updateUserStats() {
@@ -906,15 +976,20 @@ async function handleGoogleLogin() {
         // Firebase에 사용자 정보 저장
         await saveUserToDatabase(currentUser);
         
+        // 사용자 프로필 로드
+        await loadProfile();
+        
         // UI 업데이트
         updateAuthUI();
         
         // 프로필 탭이 활성화되어 있다면 프로필 내용 표시
         if (document.querySelector('.nav-btn[data-tab="profile"]').classList.contains('active')) {
-            updateProfileTab();
+            await updateProfileTab();
         }
         
-        showToast(`환영합니다, ${user.displayName}님! 🎉`);
+        // 환영 메시지 (설정된 닉네임 우선 사용)
+        const welcomeName = userProfile.nickname || user.displayName || '사용자';
+        showToast(`환영합니다, ${welcomeName}님! 🎉`);
         
     } catch (error) {
         console.error('Google 로그인 실패:', error);
@@ -961,7 +1036,7 @@ async function handleLogout() {
         
         // 프로필 탭이 활성화되어 있다면 로그인 프롬프트 표시
         if (document.querySelector('.nav-btn[data-tab="profile"]').classList.contains('active')) {
-            updateProfileTab();
+            await updateProfileTab();
         }
         
         showToast('안전하게 로그아웃되었습니다. 👋');
@@ -1007,16 +1082,21 @@ function updateAuthUI() {
         loginBtn.style.display = 'none';
         userInfo.style.display = 'flex';
         
-        // 사용자 아바타 설정 (기본 이미지 포함)
-        userAvatar.src = currentUser.photoURL || 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPGNpcmNsZSBjeD0iMjAiIGN5PSIyMCIgcj0iMjAiIGZpbGw9IiNFRUVFRUUiLz4KPHBhdGggZD0iTTIwIDEwQzIyLjA5IDEwIDI0IDEyLjA5IDI0IDE0QzI0IDE1LjkxIDIyLjA5IDE4IDIwIDE4QzE3LjkxIDE4IDE2IDE1LjkxIDE2IDE0QzE2IDEyLjA5IDE3LjkxIDEwIDIwIDEwWiIgZmlsbD0iIzk5OTk5OSIvPgo8cGF0aCBkPSJNMjAgMjBDMTYuNjkgMjAgMTQgMjIuNjkgMTQgMjZIMjZDMjYgMjIuNjkgMjMuMzEgMjAgMjAgMjBaIiBmaWxsPSIjOTk5OTk5Ii8+Cjwvc3ZnPgo=';
-        userAvatar.alt = `${currentUser.displayName}의 프로필`;
+        // 사용자가 설정한 프로필 정보 우선 사용
+        const displayName = userProfile.nickname || currentUser.displayName || '사용자';
+        const displayAvatar = userProfile.avatar || currentUser.photoURL || 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPGNpcmNsZSBjeD0iMjAiIGN5PSIyMCIgcj0iMjAiIGZpbGw9IiNFRUVFRUUiLz4KPHBhdGggZD0iTTIwIDEwQzIyLjA5IDEwIDI0IDEyLjA5IDI0IDE0QzI0IDE1LjkxIDIyLjA5IDE4IDIwIDE4QzE3LjkxIDE4IDE2IDE1LjkxIDE2IDE0QzE2IDEyLjA5IDE3LjkxIDEwIDIwIDEwWiIgZmlsbD0iIzk5OTk5OSIvPgo8cGF0aCBkPSJNMjAgMjBDMTYuNjkgMjAgMTQgMjIuNjkgMTQgMjZIMjZDMjYgMjIuNjkgMjMuMzEgMjAgMjAgMjBaIiBmaWxsPSIjOTk5OTk5Ii8+Cjwvc3ZnPgo=';
         
-        userName.textContent = currentUser.displayName || '사용자';
+        // 사용자 아바타 설정
+        userAvatar.src = displayAvatar;
+        userAvatar.alt = `${displayName}의 프로필`;
         
-        // 포스트 작성 폼의 작성자 필드 자동 채우기
+        // 사용자 이름 표시
+        userName.textContent = displayName;
+        
+        // 포스트 작성 폼의 작성자 필드 자동 채우기 (설정된 닉네임 우선)
         const authorInput = document.getElementById('author-name');
         if (authorInput) {
-            authorInput.value = currentUser.displayName || '';
+            authorInput.value = displayName;
             authorInput.readOnly = true;
             authorInput.style.backgroundColor = '#f5f5f5';
         }
@@ -1038,14 +1118,14 @@ function updateAuthUI() {
     }
 }
 
-function updateProfileTab() {
+async function updateProfileTab() {
     if (currentUser) {
         // 로그인된 경우 프로필 내용 표시
         loginRequired.style.display = 'none';
         profileContent.style.display = 'block';
         
-        // 기존 프로필 정보 로드
-        loadProfile();
+        // 사용자 프로필 정보 로드
+        await loadProfile();
         
     } else {
         // 로그인되지 않은 경우 로그인 프롬프트 표시
@@ -1058,7 +1138,7 @@ function updateProfileTab() {
 function initializeAuth() {
     console.log('🔐 인증 상태 감지 시작...');
     
-    onAuthStateChanged(window.auth, (user) => {
+    onAuthStateChanged(window.auth, async (user) => {
         if (user) {
             // 로그인된 상태
             console.log('✅ 사용자 로그인 감지:', user.email);
@@ -1070,12 +1150,23 @@ function initializeAuth() {
             };
             
             // 사용자 정보를 Firebase에 저장
-            saveUserToDatabase(currentUser);
+            await saveUserToDatabase(currentUser);
+            
+            // 사용자 프로필 로드
+            await loadProfile();
             
         } else {
             // 로그아웃된 상태
             console.log('🔓 사용자 로그아웃 감지');
             currentUser = null;
+            
+            // 프로필 정보 초기화
+            userProfile = {
+                nickname: '',
+                bio: '',
+                favoriteTeam: '',
+                avatar: ''
+            };
         }
         
         // UI 업데이트
@@ -1083,7 +1174,7 @@ function initializeAuth() {
         
         // 프로필 탭이 활성화되어 있다면 업데이트
         if (document.querySelector('.nav-btn[data-tab="profile"]').classList.contains('active')) {
-            updateProfileTab();
+            await updateProfileTab();
         }
         
         console.log('🔄 인증 UI 업데이트 완료');
