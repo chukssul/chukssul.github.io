@@ -4,172 +4,55 @@ let matches = [];
 let articles = [];
 let comments = {};
 
-// 크롤링 설정 - config.js에서 가져오기
-const CRAWLING_CONFIG = window.CONFIG || {
-    PROXY_URLS: ['https://api.allorigins.win/raw?url='],
-    FOOTBALL_SITES: ['https://www.livescore.com/football/'],
-    NEWS_SITES: ['https://www.bbc.com/sport/football']
-};
+// 기존 설정 제거 - real-crawler.js에서 처리
 
-// 실제 축구 데이터 (정적 데이터 + 자동 업데이트)
-const REAL_FOOTBALL_DATA = {
-    // 현재 시즌 주요 리그 경기 일정
-    MATCHES: [
-        {
-            id: 'match-1',
-            homeTeam: '맨체스터 시티',
-            awayTeam: '리버풀',
-            homeScore: 2,
-            awayScore: 1,
-            date: new Date(Date.now() + 86400000), // 내일
-            status: 'scheduled',
-            venue: '에티하드 스타디움',
-            referee: '마이클 올리버',
-            leagueName: '프리미어 리그'
-        },
-        {
-            id: 'match-2',
-            homeTeam: '바르셀로나',
-            awayTeam: '레알 마드리드',
-            homeScore: 0,
-            awayScore: 0,
-            date: new Date(Date.now() + 172800000), // 이틀 후
-            status: 'scheduled',
-            venue: '캄프 누',
-            referee: '안토니오 마테우 라오스',
-            leagueName: '라 리가'
-        },
-        {
-            id: 'match-3',
-            homeTeam: '파리 생제르맹',
-            awayTeam: '바이에른 뮌헨',
-            homeScore: 1,
-            awayScore: 2,
-            date: new Date(Date.now() - 3600000), // 1시간 전
-            status: 'finished',
-            venue: '파르크 데 프랭스',
-            referee: '안토니오 마테우 라오스',
-            leagueName: 'UEFA 챔피언스 리그'
-        },
-        {
-            id: 'match-4',
-            homeTeam: '토트넘',
-            awayTeam: '아스널',
-            homeScore: 0,
-            awayScore: 0,
-            date: new Date(Date.now() + 259200000), // 3일 후
-            status: 'scheduled',
-            venue: '토트넘 홋스퍼 스타디움',
-            referee: '폴 티어니',
-            leagueName: '프리미어 리그'
-        },
-        {
-            id: 'match-5',
-            homeTeam: '첼시',
-            awayTeam: '맨체스터 유나이티드',
-            homeScore: 3,
-            awayScore: 1,
-            date: new Date(Date.now() - 7200000), // 2시간 전
-            status: 'finished',
-            venue: '스탬포드 브리지',
-            referee: '크레이그 포슨',
-            leagueName: '프리미어 리그'
-        },
-        {
-            id: 'match-6',
-            homeTeam: '인터 밀란',
-            awayTeam: 'AC 밀란',
-            homeScore: 0,
-            awayScore: 0,
-            date: new Date(Date.now() + 432000000), // 5일 후
-            status: 'scheduled',
-            venue: '산 시로',
-            referee: '마르코 구이다',
-            leagueName: '세리에 A'
-        },
-        {
-            id: 'match-7',
-            homeTeam: '유벤투스',
-            awayTeam: '나폴리',
-            homeScore: 2,
-            awayScore: 2,
-            date: new Date(Date.now() - 1800000), // 30분 전
-            status: 'finished',
-            venue: '알리안츠 스타디움',
-            referee: '마우리치오 마리아니',
-            leagueName: '세리에 A'
-        },
-        {
-            id: 'match-8',
-            homeTeam: '보루시아 도르트문트',
-            awayTeam: '바이어 레버쿠젠',
-            homeScore: 0,
-            awayScore: 0,
-            date: new Date(Date.now() + 604800000), // 7일 후
-            status: 'scheduled',
-            venue: '시그날 이두나 파크',
-            referee: '펠릭스 브리히',
-            leagueName: '분데스리가'
-        }
+// 실제 크롤링을 위한 설정
+const CRAWLING_CONFIG = {
+    // 더 안정적인 프록시 서비스들
+    PROXY_URLS: [
+        'https://api.allorigins.win/raw?url=',
+        'https://cors-anywhere.herokuapp.com/',
+        'https://thingproxy.freeboard.io/fetch/',
+        'https://api.codetabs.com/v1/proxy?quest=',
+        'https://cors.bridged.cc/',
+        'https://corsproxy.io/?'
     ],
     
-    // 실제 축구 뉴스 데이터
-    ARTICLES: [
-        {
-            id: 'article-1',
-            title: '손흥민, 프리미어 리그 득점왕 경쟁에서 선두',
-            description: '토트넘의 손흥민이 프리미어 리그 득점왕 경쟁에서 선두를 달리고 있습니다. 현재까지 15골을 기록한 손흥민은 맨체스터 시티의 엘링 홀란드와 함께 득점왕 경쟁을 벌이고 있습니다.',
-            source: 'ESPN',
-            publishedAt: new Date(Date.now() - 3600000),
-            url: '#',
-            content: '토트넘 홋스퍼의 손흥민이 프리미어 리그 득점왕 경쟁에서 선두를 달리고 있습니다. 현재까지 15골을 기록한 손흥민은 맨체스터 시티의 엘링 홀란드와 함께 득점왕 경쟁을 벌이고 있습니다. 손흥민은 지난 시즌에도 뛰어난 활약을 보였으며, 이번 시즌에도 팀의 핵심 공격수로서 맹활약하고 있습니다.'
-        },
-        {
-            id: 'article-2',
-            title: '김민재, 바이에른 뮌헨에서 안정적인 활약',
-            description: '바이에른 뮌헨의 김민재가 부상 복귀 후 안정적인 활약을 보이고 있습니다. 최근 경기에서 뛰어난 수비력을 보여주며 팀의 승리에 기여하고 있습니다.',
-            source: 'BBC Sport',
-            publishedAt: new Date(Date.now() - 7200000),
-            url: '#',
-            content: '바이에른 뮌헨의 김민재가 부상에서 복귀한 후 안정적인 활약을 보이고 있습니다. 최근 경기에서 뛰어난 수비력을 보여주며 팀의 승리에 기여하고 있습니다. 김민재는 지난 시즌 부상으로 인해 많은 경기를 놓쳤지만, 이번 시즌에는 완전히 회복되어 팀의 핵심 수비수로서 자리매김하고 있습니다.'
-        },
-        {
-            id: 'article-3',
-            title: '하알란드, 맨체스터 시티에서 연속 득점',
-            description: '엘링 홀란드가 맨체스터 시티에서 연속으로 득점하며 팀의 승리를 이끌고 있습니다. 최근 5경기에서 8골을 기록한 홀란드는 프리미어 리그 최고의 공격수임을 다시 한번 증명했습니다.',
-            source: 'Goal.com',
-            publishedAt: new Date(Date.now() - 10800000),
-            url: '#',
-            content: '엘링 홀란드가 맨체스터 시티에서 연속으로 득점하며 팀의 승리를 이끌고 있습니다. 최근 5경기에서 8골을 기록한 홀란드는 프리미어 리그 최고의 공격수임을 다시 한번 증명했습니다. 펩 과르디올라 감독은 홀란드의 활약에 대해 "그는 단순히 득점만 하는 것이 아니라 팀 전체의 공격을 이끌고 있다"고 평가했습니다.'
-        },
-        {
-            id: 'article-4',
-            title: '메시, 인터 마이애미에서 MLS 데뷔',
-            description: '리오넬 메시가 인터 마이애미에서 MLS 데뷔를 앞두고 있습니다. 월드컵 우승 후 새로운 도전을 시작한 메시의 MLS 활약이 전 세계 축구팬들의 관심을 받고 있습니다.',
-            source: 'Football365',
-            publishedAt: new Date(Date.now() - 14400000),
-            url: '#',
-            content: '리오넬 메시가 인터 마이애미에서 MLS 데뷔를 앞두고 있습니다. 월드컵 우승 후 새로운 도전을 시작한 메시의 MLS 활약이 전 세계 축구팬들의 관심을 받고 있습니다. 메시는 "새로운 도전이 기대된다"며 "미국 축구의 발전에 기여하고 싶다"고 소감을 밝혔습니다.'
-        },
-        {
-            id: 'article-5',
-            title: '케인, 바이에른 뮌헨 적응 완료',
-            description: '해리 케인이 바이에른 뮌헨에 완전히 적응했다는 평가를 받고 있습니다. 프리미어 리그에서 분데스리가로 이적한 케인은 새로운 환경에서도 뛰어난 활약을 보이고 있습니다.',
-            source: '90min',
-            publishedAt: new Date(Date.now() - 18000000),
-            url: '#',
-            content: '해리 케인이 바이에른 뮌헨에 완전히 적응했다는 평가를 받고 있습니다. 프리미어 리그에서 분데스리가로 이적한 케인은 새로운 환경에서도 뛰어난 활약을 보이고 있습니다. 토마스 투헬 감독은 "케인은 단순히 득점뿐만 아니라 팀 전체의 공격을 이끄는 리더십을 보여주고 있다"고 평가했습니다.'
-        },
-        {
-            id: 'article-6',
-            title: '벤제마, 알 이티하드에서 새로운 시작',
-            description: '카림 벤제마가 사우디아라비아의 알 이티하드에서 새로운 도전을 시작했습니다. 레알 마드리드에서 떠난 벤제마는 중동 축구의 새로운 시대를 열고 있습니다.',
-            source: 'ESPN',
-            publishedAt: new Date(Date.now() - 21600000),
-            url: '#',
-            content: '카림 벤제마가 사우디아라비아의 알 이티하드에서 새로운 도전을 시작했습니다. 레알 마드리드에서 떠난 벤제마는 중동 축구의 새로운 시대를 열고 있습니다. 벤제마는 "새로운 문화와 축구 환경에서 도전하는 것이 흥미롭다"며 "사우디아라비아 축구의 발전에 기여하고 싶다"고 소감을 밝혔습니다.'
-        }
-    ]
+    // 실제 크롤링 가능한 사이트들
+    FOOTBALL_SITES: [
+        'https://www.livescore.com/football/',
+        'https://www.flashscore.com/football/',
+        'https://www.transfermarkt.com/wettbewerbe/national',
+        'https://www.soccerway.com/matches/',
+        'https://www.whoscored.com/Regions/252/Tournaments/2/England-Premier-League'
+    ],
+    
+    // 실제 뉴스 사이트들
+    NEWS_SITES: [
+        'https://www.bbc.com/sport/football',
+        'https://www.espn.com/soccer/',
+        'https://www.goal.com/en/news',
+        'https://www.football365.com/',
+        'https://www.90min.com/',
+        'https://www.skysports.com/football'
+    ],
+    
+    // User-Agent 목록
+    USER_AGENTS: [
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/121.0',
+        'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.1 Safari/605.1.15'
+    ],
+    
+    // 크롤링 설정
+    CRAWLING_SETTINGS: {
+        MAX_MATCHES_PER_LEAGUE: 20,
+        MAX_NEWS_PER_SITE: 3,
+        TIMEOUT: 15000,
+        RETRY_ATTEMPTS: 3,
+        DELAY_BETWEEN_REQUESTS: 2000
+    }
 };
 
 // DOM 요소들
@@ -257,111 +140,70 @@ function switchTab(tabName) {
     document.getElementById(tabName).classList.add('active');
 }
 
-// 실제 경기 데이터 로드 (정적 데이터 + 자동 업데이트)
+// 실제 경기 데이터 로드 (실제 크롤링)
 async function loadMatches() {
     matchesLoading.style.display = 'block';
     matchesGrid.innerHTML = '';
 
     try {
-        console.log('경기 데이터 로드 시작...');
+        console.log('실제 경기 데이터 크롤링 시작...');
         
-        // 정적 데이터 로드
-        matches = [...REAL_FOOTBALL_DATA.MATCHES];
+        // 실제 크롤링 시도
+        if (window.realCrawler) {
+            matches = await window.realCrawler.crawlMatches();
+        } else {
+            throw new Error('크롤러가 로드되지 않았습니다');
+        }
         
-        // 실시간 업데이트 시뮬레이션
-        await simulateRealTimeUpdates();
+        if (matches.length === 0) {
+            throw new Error('크롤링된 데이터가 없습니다');
+        }
         
-        console.log(`${matches.length}개의 경기 데이터 로드 완료`);
+        console.log(`${matches.length}개의 실제 경기 데이터 로드 완료`);
         
         // 시간 기준으로 정렬
         matches.sort((a, b) => new Date(a.date) - new Date(b.date));
         displayMatches(matches);
     } catch (error) {
         console.error('경기 데이터 로드 실패:', error);
-        matchesGrid.innerHTML = '<div class="no-data">경기 데이터를 불러올 수 없습니다. 잠시 후 다시 시도해주세요.</div>';
+        matchesGrid.innerHTML = '<div class="no-data">실제 경기 데이터를 불러올 수 없습니다. 잠시 후 다시 시도해주세요.</div>';
     } finally {
         matchesLoading.style.display = 'none';
     }
 }
 
-// 실시간 업데이트 시뮬레이션
-async function simulateRealTimeUpdates() {
-    // 일부 경기를 실시간으로 업데이트
-    const now = new Date();
-    
-    matches.forEach(match => {
-        const matchDate = new Date(match.date);
-        const timeDiff = matchDate - now;
-        
-        // 1시간 이내 경기는 'live' 상태로 변경
-        if (timeDiff > -3600000 && timeDiff < 3600000 && match.status === 'scheduled') {
-            match.status = 'live';
-            // 실시간 스코어 업데이트
-            if (Math.random() > 0.7) {
-                match.homeScore += Math.floor(Math.random() * 2);
-                match.awayScore += Math.floor(Math.random() * 2);
-            }
-        }
-        
-        // 2시간 전 경기는 'finished' 상태로 변경
-        if (timeDiff < -7200000 && match.status === 'live') {
-            match.status = 'finished';
-        }
-    });
-}
+// 불필요한 시뮬레이션 함수 제거
 
-// 실제 기사 로드 (정적 데이터 + 자동 업데이트)
+// 실제 기사 로드 (실제 크롤링)
 async function loadArticles() {
     articlesLoading.style.display = 'block';
     articlesGrid.innerHTML = '';
 
     try {
-        console.log('기사 데이터 로드 시작...');
+        console.log('실제 뉴스 데이터 크롤링 시작...');
         
-        // 정적 데이터 로드
-        articles = [...REAL_FOOTBALL_DATA.ARTICLES];
+        // 실제 크롤링 시도
+        if (window.realCrawler) {
+            articles = await window.realCrawler.crawlArticles();
+        } else {
+            throw new Error('크롤러가 로드되지 않았습니다');
+        }
         
-        // 새로운 기사 추가 시뮬레이션
-        await simulateNewArticles();
+        if (articles.length === 0) {
+            throw new Error('크롤링된 데이터가 없습니다');
+        }
         
-        console.log(`${articles.length}개의 기사 데이터 로드 완료`);
+        console.log(`${articles.length}개의 실제 뉴스 데이터 로드 완료`);
         displayArticles(articles);
     } catch (error) {
-        console.error('기사 데이터 로드 실패:', error);
-        articlesGrid.innerHTML = '<div class="no-data">뉴스 데이터를 불러올 수 없습니다. 잠시 후 다시 시도해주세요.</div>';
+        console.error('뉴스 데이터 로드 실패:', error);
+        articlesGrid.innerHTML = '<div class="no-data">실제 뉴스 데이터를 불러올 수 없습니다. 잠시 후 다시 시도해주세요.</div>';
     } finally {
         articlesLoading.style.display = 'none';
     }
 }
 
-// 새로운 기사 추가 시뮬레이션
-async function simulateNewArticles() {
-    const newArticles = [
-        {
-            id: `article-${Date.now()}`,
-            title: '최신: 프리미어 리그 이적 시장 마감',
-            description: '프리미어 리그 이적 시장이 마감되었습니다. 주요 이적 소식과 각 팀의 변화를 정리해드립니다.',
-            source: 'Sky Sports',
-            publishedAt: new Date(),
-            url: '#',
-            content: '프리미어 리그 이적 시장이 마감되었습니다. 주요 이적 소식과 각 팀의 변화를 정리해드립니다. 맨체스터 시티, 리버풀, 첼시 등 주요 팀들의 이적 활동이 활발했으며, 새로운 시즌을 위한 준비가 완료되었습니다.'
-        },
-        {
-            id: `article-${Date.now() + 1}`,
-            title: 'UEFA 챔피언스 리그 16강 대진 확정',
-            description: 'UEFA 챔피언스 리그 16강 대진이 확정되었습니다. 강팀들 간의 치열한 대결이 예상됩니다.',
-            source: 'UEFA.com',
-            publishedAt: new Date(Date.now() - 1800000),
-            url: '#',
-            content: 'UEFA 챔피언스 리그 16강 대진이 확정되었습니다. 강팀들 간의 치열한 대결이 예상됩니다. 맨체스터 시티 vs 레알 마드리드, 바이에른 뮌헨 vs 파리 생제르맹 등 흥미진진한 대결이 펼쳐질 예정입니다.'
-        }
-    ];
-    
-    // 30% 확률로 새로운 기사 추가
-    if (Math.random() > 0.7) {
-        articles.unshift(...newArticles);
-    }
-}
+// 불필요한 시뮬레이션 함수 제거
 
 // 경기 표시
 function displayMatches(matchesToShow) {
