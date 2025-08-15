@@ -11,24 +11,11 @@ class RealCrawler {
                 'https://corsproxy.io/?'
             ],
             FOOTBALL_SITES: [
-                'https://www.livescore.com/football/',
-                'https://www.flashscore.com/football/',
-                'https://www.transfermarkt.com/wettbewerbe/national',
-                'https://www.soccerway.com/matches/',
-                'https://www.whoscored.com/Regions/252/Tournaments/2/England-Premier-League',
-                'https://www.espn.com/soccer/schedule',
-                'https://www.bbc.com/sport/football/scores-fixtures',
-                'https://www.skysports.com/football/fixtures',
-                'https://www.goal.com/en/fixtures',
-                'https://www.football365.com/fixtures'
+                'https://www.livescore.com/football/'
             ],
             NEWS_SITES: [
-                'https://www.bbc.com/sport/football',
-                'https://www.espn.com/soccer/',
                 'https://www.goal.com/en/news',
-                'https://www.football365.com/',
-                'https://www.90min.com/',
-                'https://www.skysports.com/football'
+                'https://www.90min.com/'
             ],
             USER_AGENTS: [
                 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
@@ -121,19 +108,11 @@ class RealCrawler {
         const matches = [];
         
         // 사이트별 특화 파싱
-        if (site.includes('espn')) {
-            return this.parseESPNMatches(html);
-        } else if (site.includes('bbc')) {
-            return this.parseBBCMatches(html);
-        } else if (site.includes('skysports')) {
-            return this.parseSkySportsMatches(html);
-        } else if (site.includes('goal')) {
-            return this.parseGoalMatches(html);
-        } else if (site.includes('football365')) {
-            return this.parseFootball365Matches(html);
+        if (site.includes('livescore')) {
+            return this.parseLivescoreMatches(html);
         }
         
-        // 일반적인 패턴으로 경기 정보 추출
+        // 일반적인 패턴으로 경기 정보 추출 (fallback)
         const patterns = [
             /<div[^>]*class="[^"]*(match|fixture|game)[^"]*"[^>]*>([\s\S]*?)<\/div>/gi,
             /<tr[^>]*class="[^"]*(match|fixture)[^"]*"[^>]*>([\s\S]*?)<\/tr>/gi,
@@ -219,128 +198,168 @@ class RealCrawler {
         return null;
     }
 
-    // ESPN 경기 파싱
-    parseESPNMatches(html) {
+    // Livescore 경기 파싱
+    parseLivescoreMatches(html) {
         const matches = [];
-        const patterns = [
-            /<tr[^>]*class="[^"]*(Table__TR)[^"]*"[^>]*>([\s\S]*?)<\/tr>/gi,
-            /<div[^>]*class="[^"]*(gameCell)[^"]*"[^>]*>([\s\S]*?)<\/div>/gi
+        
+        // Livescore의 실제 HTML 구조 분석
+        // 경기 카드 패턴들
+        const matchPatterns = [
+            // 메인 경기 카드
+            /<div[^>]*class="[^"]*(match-row|match-card|fixture-row)[^"]*"[^>]*>([\s\S]*?)<\/div>/gi,
+            // 테이블 행
+            /<tr[^>]*class="[^"]*(match-row|fixture-row)[^"]*"[^>]*>([\s\S]*?)<\/tr>/gi,
+            // 리스트 아이템
+            /<li[^>]*class="[^"]*(match-item|fixture-item)[^"]*"[^>]*>([\s\S]*?)<\/li>/gi,
+            // 일반적인 경기 컨테이너
+            /<div[^>]*class="[^"]*(match|fixture)[^"]*"[^>]*>([\s\S]*?)<\/div>/gi
         ];
         
-        patterns.forEach(pattern => {
+        console.log('Livescore HTML 길이:', html.length);
+        console.log('HTML 샘플:', html.substring(0, 1000));
+        
+        matchPatterns.forEach((pattern, index) => {
+            console.log(`패턴 ${index + 1} 시도 중...`);
             let match;
-            while ((match = pattern.exec(html)) !== null && matches.length < 5) {
+            while ((match = pattern.exec(html)) !== null && matches.length < 15) {
                 const matchHtml = match[2] || match[1];
-                const parsedMatch = this.extractMatchInfo(matchHtml, 'espn');
+                console.log(`경기 HTML 발견 (패턴 ${index + 1}):`, matchHtml.substring(0, 200));
+                
+                const parsedMatch = this.extractLivescoreMatchInfo(matchHtml);
                 if (parsedMatch) {
                     matches.push(parsedMatch);
+                    console.log('경기 파싱 성공:', parsedMatch);
                 }
             }
         });
         
+        console.log(`총 ${matches.length}개 경기 파싱 완료`);
         return matches;
     }
 
-    // BBC 경기 파싱
-    parseBBCMatches(html) {
-        const matches = [];
-        const patterns = [
-            /<div[^>]*class="[^"]*(gs-c-promo)[^"]*"[^>]*>([\s\S]*?)<\/div>/gi,
-            /<li[^>]*class="[^"]*(gs-c-promo)[^"]*"[^>]*>([\s\S]*?)<\/li>/gi
+    // Livescore 경기 정보 추출
+    extractLivescoreMatchInfo(matchHtml) {
+        console.log('Livescore 경기 정보 추출 시작:', matchHtml.substring(0, 300));
+        
+        // 팀명 추출 - 다양한 패턴 시도
+        const teamPatterns = [
+            // 클래스 기반 팀명
+            /<span[^>]*class="[^"]*(team-name|team|home-team|away-team)[^"]*"[^>]*>([^<]+)<\/span>/gi,
+            // 링크 기반 팀명
+            /<a[^>]*class="[^"]*(team-name|team)[^"]*"[^>]*>([^<]+)<\/a>/gi,
+            // div 기반 팀명
+            /<div[^>]*class="[^"]*(team-name|team)[^"]*"[^>]*>([^<]+)<\/div>/gi,
+            // 일반적인 텍스트 패턴
+            /<[^>]*>([A-Z][a-zA-Z\s]+(?:FC|United|City|Town|Rovers|Athletic|Wanderers|Albion))<\/[^>]*>/gi
         ];
         
-        patterns.forEach(pattern => {
-            let match;
-            while ((match = pattern.exec(html)) !== null && matches.length < 5) {
-                const matchHtml = match[2] || match[1];
-                const parsedMatch = this.extractMatchInfo(matchHtml, 'bbc');
-                if (parsedMatch) {
-                    matches.push(parsedMatch);
+        const teams = [];
+        teamPatterns.forEach((pattern, index) => {
+            console.log(`팀명 패턴 ${index + 1} 시도 중...`);
+            let teamMatch;
+            while ((teamMatch = pattern.exec(matchHtml)) !== null) {
+                const teamName = (teamMatch[2] || teamMatch[1]).trim();
+                if (teamName.length > 2 && teamName.length < 50 && !teams.includes(teamName)) {
+                    teams.push(teamName);
+                    console.log(`팀명 발견: ${teamName}`);
                 }
             }
         });
         
-        return matches;
+        console.log('발견된 팀들:', teams);
+        
+        if (teams.length >= 2) {
+            // 스코어 추출
+            const scorePatterns = [
+                /(\d+)\s*[-:]\s*(\d+)/,
+                /<span[^>]*class="[^"]*score[^"]*"[^>]*>(\d+)\s*[-:]\s*(\d+)<\/span>/i,
+                /<div[^>]*class="[^"]*score[^"]*"[^>]*>(\d+)\s*[-:]\s*(\d+)<\/div>/i
+            ];
+            
+            let homeScore = 0, awayScore = 0;
+            scorePatterns.forEach(pattern => {
+                const scoreMatch = matchHtml.match(pattern);
+                if (scoreMatch) {
+                    homeScore = parseInt(scoreMatch[1]);
+                    awayScore = parseInt(scoreMatch[2]);
+                    console.log(`스코어 발견: ${homeScore}-${awayScore}`);
+                }
+            });
+            
+            // 날짜/시간 추출
+            const datePatterns = [
+                /(\d{1,2}\/\d{1,2}\/\d{4})/,
+                /(\d{4}-\d{2}-\d{2})/,
+                /(\d{1,2}\.\d{1,2}\.\d{4})/,
+                /<span[^>]*class="[^"]*date[^"]*"[^>]*>([^<]+)<\/span>/i,
+                /<div[^>]*class="[^"]*date[^"]*"[^>]*>([^<]+)<\/div>/i
+            ];
+            
+            let matchDate = new Date();
+            datePatterns.forEach(pattern => {
+                const dateMatch = matchHtml.match(pattern);
+                if (dateMatch) {
+                    const dateStr = dateMatch[1] || dateMatch[0];
+                    const parsedDate = new Date(dateStr);
+                    if (!isNaN(parsedDate.getTime())) {
+                        matchDate = parsedDate;
+                        console.log(`날짜 발견: ${dateStr}`);
+                    }
+                }
+            });
+            
+            // 리그명 추출
+            const leaguePatterns = [
+                /<span[^>]*class="[^"]*league[^"]*"[^>]*>([^<]+)<\/span>/i,
+                /<div[^>]*class="[^"]*league[^"]*"[^>]*>([^<]+)<\/div>/i,
+                /<a[^>]*class="[^"]*league[^"]*"[^>]*>([^<]+)<\/a>/i
+            ];
+            
+            let leagueName = '축구 리그';
+            leaguePatterns.forEach(pattern => {
+                const leagueMatch = matchHtml.match(pattern);
+                if (leagueMatch) {
+                    leagueName = leagueMatch[1].trim();
+                    console.log(`리그명 발견: ${leagueName}`);
+                }
+            });
+            
+            // 경기 상태 추출
+            let status = 'scheduled';
+            if (matchHtml.includes('live') || matchHtml.includes('Live')) {
+                status = 'live';
+            } else if (matchHtml.includes('finished') || matchHtml.includes('FT')) {
+                status = 'finished';
+            }
+            
+            const match = {
+                id: `match-${Date.now()}-${Math.random()}`,
+                homeTeam: teams[0],
+                awayTeam: teams[1],
+                homeScore: homeScore,
+                awayScore: awayScore,
+                date: matchDate,
+                status: status,
+                venue: '경기장',
+                referee: '주심',
+                leagueName: leagueName
+            };
+            
+            console.log('최종 경기 정보:', match);
+            return match;
+        }
+        
+        console.log('유효한 경기 정보를 찾을 수 없음');
+        return null;
     }
 
-    // Sky Sports 경기 파싱
-    parseSkySportsMatches(html) {
-        const matches = [];
-        const patterns = [
-            /<div[^>]*class="[^"]*(fixres__item)[^"]*"[^>]*>([\s\S]*?)<\/div>/gi,
-            /<tr[^>]*class="[^"]*(fixres__item)[^"]*"[^>]*>([\s\S]*?)<\/tr>/gi
-        ];
-        
-        patterns.forEach(pattern => {
-            let match;
-            while ((match = pattern.exec(html)) !== null && matches.length < 5) {
-                const matchHtml = match[2] || match[1];
-                const parsedMatch = this.extractMatchInfo(matchHtml, 'skysports');
-                if (parsedMatch) {
-                    matches.push(parsedMatch);
-                }
-            }
-        });
-        
-        return matches;
-    }
-
-    // Goal.com 경기 파싱
-    parseGoalMatches(html) {
-        const matches = [];
-        const patterns = [
-            /<div[^>]*class="[^"]*(match-row)[^"]*"[^>]*>([\s\S]*?)<\/div>/gi,
-            /<tr[^>]*class="[^"]*(match-row)[^"]*"[^>]*>([\s\S]*?)<\/tr>/gi
-        ];
-        
-        patterns.forEach(pattern => {
-            let match;
-            while ((match = pattern.exec(html)) !== null && matches.length < 5) {
-                const matchHtml = match[2] || match[1];
-                const parsedMatch = this.extractMatchInfo(matchHtml, 'goal');
-                if (parsedMatch) {
-                    matches.push(parsedMatch);
-                }
-            }
-        });
-        
-        return matches;
-    }
-
-    // Football365 경기 파싱
-    parseFootball365Matches(html) {
-        const matches = [];
-        const patterns = [
-            /<div[^>]*class="[^"]*(fixture)[^"]*"[^>]*>([\s\S]*?)<\/div>/gi,
-            /<article[^>]*class="[^"]*(fixture)[^"]*"[^>]*>([\s\S]*?)<\/article>/gi
-        ];
-        
-        patterns.forEach(pattern => {
-            let match;
-            while ((match = pattern.exec(html)) !== null && matches.length < 5) {
-                const matchHtml = match[2] || match[1];
-                const parsedMatch = this.extractMatchInfo(matchHtml, 'football365');
-                if (parsedMatch) {
-                    matches.push(parsedMatch);
-                }
-            }
-        });
-        
-        return matches;
-    }
+    // 불필요한 파싱 함수들 제거
 
     // 리그명 추출
     extractLeagueName(site) {
-        if (site.includes('premier')) return '프리미어 리그';
-        if (site.includes('laliga') || site.includes('barcelona') || site.includes('madrid')) return '라 리가';
-        if (site.includes('bundesliga') || site.includes('bayern')) return '분데스리가';
-        if (site.includes('serie') || site.includes('milan') || site.includes('juventus')) return '세리에 A';
-        if (site.includes('champions')) return 'UEFA 챔피언스 리그';
-        if (site.includes('espn')) return 'ESPN 축구';
-        if (site.includes('bbc')) return 'BBC 스포츠';
-        if (site.includes('skysports')) return 'Sky Sports';
+        if (site.includes('livescore')) return 'Livescore';
         if (site.includes('goal')) return 'Goal.com';
-        if (site.includes('football365')) return 'Football365';
+        if (site.includes('90min')) return '90min';
         return '축구 리그';
     }
 
