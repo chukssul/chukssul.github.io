@@ -4,11 +4,11 @@ class RealCrawler {
         this.config = {
             PROXY_URLS: [
                 'https://api.allorigins.win/raw?url=',
+                'https://corsproxy.io/?',
                 'https://cors-anywhere.herokuapp.com/',
                 'https://thingproxy.freeboard.io/fetch/',
                 'https://api.codetabs.com/v1/proxy?quest=',
-                'https://cors.bridged.cc/',
-                'https://corsproxy.io/?'
+                'https://cors.bridged.cc/'
             ],
             FOOTBALL_SITES: [
                 'https://www.livescore.com/football/'
@@ -71,12 +71,7 @@ class RealCrawler {
                     method: 'GET',
                     headers: {
                         'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-                        'Accept-Language': 'en-US,en;q=0.5',
-                        'Accept-Encoding': 'gzip, deflate',
-                        'Connection': 'keep-alive',
-                        'User-Agent': userAgent,
-                        'Cache-Control': 'no-cache',
-                        'Pragma': 'no-cache'
+                        'User-Agent': userAgent
                     },
                     timeout: 15000
                 });
@@ -202,28 +197,34 @@ class RealCrawler {
     parseLivescoreMatches(html) {
         const matches = [];
         
-        // Livescore의 실제 HTML 구조 분석
-        // 경기 카드 패턴들
+        console.log('Livescore HTML 길이:', html.length);
+        console.log('HTML 샘플:', html.substring(0, 2000));
+        
+        // Livescore의 실제 HTML 구조 분석 - 더 구체적인 패턴들
         const matchPatterns = [
-            // 메인 경기 카드
-            /<div[^>]*class="[^"]*(match-row|match-card|fixture-row)[^"]*"[^>]*>([\s\S]*?)<\/div>/gi,
-            // 테이블 행
-            /<tr[^>]*class="[^"]*(match-row|fixture-row)[^"]*"[^>]*>([\s\S]*?)<\/tr>/gi,
-            // 리스트 아이템
-            /<li[^>]*class="[^"]*(match-item|fixture-item)[^"]*"[^>]*>([\s\S]*?)<\/li>/gi,
-            // 일반적인 경기 컨테이너
-            /<div[^>]*class="[^"]*(match|fixture)[^"]*"[^>]*>([\s\S]*?)<\/div>/gi
+            // Next.js 컴포넌트 기반 패턴
+            /<div[^>]*data-testid="[^"]*(match|fixture)[^"]*"[^>]*>([\s\S]*?)<\/div>/gi,
+            // 클래스 기반 패턴 (더 구체적)
+            /<div[^>]*class="[^"]*(MatchRow|FixtureRow|GameRow)[^"]*"[^>]*>([\s\S]*?)<\/div>/gi,
+            // 일반적인 경기 패턴
+            /<div[^>]*class="[^"]*(match|fixture|game)[^"]*"[^>]*>([\s\S]*?)<\/div>/gi,
+            // 테이블 행 패턴
+            /<tr[^>]*class="[^"]*(match|fixture)[^"]*"[^>]*>([\s\S]*?)<\/tr>/gi,
+            // 리스트 아이템 패턴
+            /<li[^>]*class="[^"]*(match|fixture)[^"]*"[^>]*>([\s\S]*?)<\/li>/gi,
+            // article 태그 패턴
+            /<article[^>]*class="[^"]*(match|fixture)[^"]*"[^>]*>([\s\S]*?)<\/article>/gi
         ];
         
-        console.log('Livescore HTML 길이:', html.length);
-        console.log('HTML 샘플:', html.substring(0, 1000));
+        // 팀명이 포함된 모든 div 찾기 (fallback)
+        const teamDivPattern = /<div[^>]*>([^<]*(?:Manchester|Liverpool|Arsenal|Chelsea|Tottenham|Barcelona|Real Madrid|Bayern|PSG|Juventus|Milan|Inter)[^<]*)<\/div>/gi;
         
         matchPatterns.forEach((pattern, index) => {
             console.log(`패턴 ${index + 1} 시도 중...`);
             let match;
             while ((match = pattern.exec(html)) !== null && matches.length < 15) {
                 const matchHtml = match[2] || match[1];
-                console.log(`경기 HTML 발견 (패턴 ${index + 1}):`, matchHtml.substring(0, 200));
+                console.log(`경기 HTML 발견 (패턴 ${index + 1}):`, matchHtml.substring(0, 300));
                 
                 const parsedMatch = this.extractLivescoreMatchInfo(matchHtml);
                 if (parsedMatch) {
@@ -232,6 +233,36 @@ class RealCrawler {
                 }
             }
         });
+        
+        // 팀명 기반 fallback 파싱
+        if (matches.length === 0) {
+            console.log('팀명 기반 fallback 파싱 시도...');
+            const teamMatches = [];
+            let teamMatch;
+            while ((teamMatch = teamDivPattern.exec(html)) !== null && teamMatches.length < 10) {
+                const teamText = teamMatch[1];
+                console.log('팀명 발견:', teamText);
+                teamMatches.push(teamText);
+            }
+            
+            // 팀명들을 2개씩 묶어서 경기 생성
+            for (let i = 0; i < teamMatches.length - 1; i += 2) {
+                const match = {
+                    id: `match-${Date.now()}-${Math.random()}`,
+                    homeTeam: teamMatches[i].trim(),
+                    awayTeam: teamMatches[i + 1].trim(),
+                    homeScore: 0,
+                    awayScore: 0,
+                    date: new Date(),
+                    status: 'scheduled',
+                    venue: '경기장',
+                    referee: '주심',
+                    leagueName: 'Livescore'
+                };
+                matches.push(match);
+                console.log('Fallback 경기 생성:', match);
+            }
+        }
         
         console.log(`총 ${matches.length}개 경기 파싱 완료`);
         return matches;
