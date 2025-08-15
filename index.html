@@ -17,7 +17,7 @@
             </h1>
             <nav class="nav">
                 <button class="nav-btn active" data-tab="matches">경기 일정</button>
-                <button class="nav-btn" data-tab="news">축구 뉴스</button>
+                <button class="nav-btn" data-tab="articles">축구 기사</button>
             </nav>
         </div>
     </header>
@@ -28,11 +28,10 @@
             <section id="matches" class="tab-content active">
                 <div class="section-header">
                     <h2>경기 일정</h2>
-                    <div class="league-filter">
-                        <button class="filter-btn active" data-league="all">전체</button>
-                        <button class="filter-btn" data-league="kleague">K리그</button>
-                        <button class="filter-btn" data-league="premier">프리미어리그</button>
-                        <button class="filter-btn" data-league="championship">챔피언십</button>
+                    <div class="match-filter">
+                        <button class="filter-btn active" data-filter="upcoming">예정 경기</button>
+                        <button class="filter-btn" data-filter="recent">최근 경기</button>
+                        <button class="filter-btn" data-filter="all">전체</button>
                     </div>
                 </div>
                 
@@ -45,22 +44,22 @@
                 </div>
             </section>
 
-            <!-- 축구 뉴스 섹션 -->
-            <section id="news" class="tab-content">
+            <!-- 축구 기사 섹션 -->
+            <section id="articles" class="tab-content">
                 <div class="section-header">
-                    <h2>최신 축구 뉴스</h2>
-                    <button class="refresh-btn" id="refresh-news">
+                    <h2>축구 기사</h2>
+                    <button class="refresh-btn" id="refresh-articles">
                         <i class="fas fa-sync-alt"></i>
                         새로고침
                     </button>
                 </div>
                 
-                <div class="news-container">
-                    <div class="loading-spinner" id="news-loading">
+                <div class="articles-container">
+                    <div class="loading-spinner" id="articles-loading">
                         <i class="fas fa-spinner fa-spin"></i>
-                        <p>뉴스를 불러오는 중...</p>
+                        <p>기사를 불러오는 중...</p>
                     </div>
-                    <div class="news-grid" id="news-grid"></div>
+                    <div class="articles-grid" id="articles-grid"></div>
                 </div>
             </section>
         </div>
@@ -71,6 +70,24 @@
         <div class="modal-content">
             <span class="close">&times;</span>
             <div class="modal-body" id="match-modal-body"></div>
+        </div>
+    </div>
+
+    <!-- 기사 상세 모달 -->
+    <div class="modal" id="article-modal">
+        <div class="modal-content large">
+            <span class="close">&times;</span>
+            <div class="modal-body" id="article-modal-body">
+                <div class="article-content"></div>
+                <div class="comments-section">
+                    <h3>댓글</h3>
+                    <div class="comment-form">
+                        <textarea id="comment-text" placeholder="댓글을 입력하세요..."></textarea>
+                        <button id="submit-comment">댓글 작성</button>
+                    </div>
+                    <div class="comments-list" id="comments-list"></div>
+                </div>
+            </div>
         </div>
     </div>
 

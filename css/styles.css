@@ -96,8 +96,8 @@ body {
     font-weight: 700;
 }
 
-/* 리그 필터 */
-.league-filter {
+/* 경기 필터 */
+.match-filter {
     display: flex;
     gap: 0.5rem;
     flex-wrap: wrap;
@@ -263,20 +263,28 @@ body {
     color: #388e3c;
 }
 
+.time-until {
+    text-align: center;
+    font-size: 0.8rem;
+    color: #666;
+    margin-top: 0.5rem;
+    font-weight: 500;
+}
+
 @keyframes pulse {
     0% { opacity: 1; }
     50% { opacity: 0.7; }
     100% { opacity: 1; }
 }
 
-/* 뉴스 그리드 */
-.news-grid {
+/* 기사 그리드 */
+.articles-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
     gap: 1.5rem;
 }
 
-.news-card {
+.article-card {
     background: white;
     border-radius: 15px;
     overflow: hidden;
@@ -285,12 +293,12 @@ body {
     cursor: pointer;
 }
 
-.news-card:hover {
+.article-card:hover {
     transform: translateY(-5px);
     box-shadow: 0 8px 25px rgba(0,0,0,0.15);
 }
 
-.news-image {
+.article-image {
     width: 100%;
     height: 200px;
     background: linear-gradient(45deg, #1e3c72, #2a5298);
@@ -301,26 +309,26 @@ body {
     font-size: 3rem;
 }
 
-.news-content {
+.article-content {
     padding: 1.5rem;
 }
 
-.news-title {
-    font-size: 1.1rem;
+.article-title {
+    font-size: 1.2rem;
     font-weight: 600;
     margin-bottom: 0.5rem;
     line-height: 1.4;
     color: #333;
 }
 
-.news-description {
+.article-description {
     color: #666;
     font-size: 0.9rem;
     line-height: 1.5;
     margin-bottom: 1rem;
 }
 
-.news-meta {
+.article-meta {
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -328,10 +336,115 @@ body {
     color: #999;
 }
 
-.news-source {
+.article-source {
     background: #f8f9fa;
     padding: 0.25rem 0.5rem;
     border-radius: 10px;
+}
+
+/* 기사 상세 모달 */
+.modal-content.large {
+    max-width: 800px;
+    max-height: 90vh;
+    overflow-y: auto;
+}
+
+.article-content {
+    margin-bottom: 2rem;
+}
+
+.article-content h2 {
+    color: #1e3c72;
+    margin-bottom: 1rem;
+}
+
+.article-content p {
+    line-height: 1.6;
+    margin-bottom: 1rem;
+    color: #333;
+}
+
+/* 댓글 섹션 */
+.comments-section {
+    border-top: 2px solid #f0f0f0;
+    padding-top: 2rem;
+}
+
+.comments-section h3 {
+    color: #1e3c72;
+    margin-bottom: 1rem;
+}
+
+.comment-form {
+    margin-bottom: 2rem;
+}
+
+.comment-form textarea {
+    width: 100%;
+    min-height: 100px;
+    padding: 1rem;
+    border: 2px solid #e9ecef;
+    border-radius: 10px;
+    resize: vertical;
+    font-family: inherit;
+    font-size: 0.9rem;
+    margin-bottom: 1rem;
+}
+
+.comment-form textarea:focus {
+    outline: none;
+    border-color: #1e3c72;
+}
+
+.comment-form button {
+    background: #1e3c72;
+    color: white;
+    border: none;
+    padding: 0.75rem 1.5rem;
+    border-radius: 25px;
+    cursor: pointer;
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+
+.comment-form button:hover {
+    background: #2a5298;
+    transform: translateY(-2px);
+}
+
+.comments-list {
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.comment-item {
+    background: #f8f9fa;
+    padding: 1rem;
+    border-radius: 10px;
+    margin-bottom: 1rem;
+    border-left: 4px solid #1e3c72;
+}
+
+.comment-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+}
+
+.comment-author {
+    font-weight: 600;
+    color: #1e3c72;
+}
+
+.comment-time {
+    font-size: 0.8rem;
+    color: #999;
+}
+
+.comment-text {
+    color: #333;
+    line-height: 1.5;
 }
 
 /* 모달 */
