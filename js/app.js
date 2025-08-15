@@ -3,6 +3,13 @@ let currentLeague = 'all';
 let matches = [];
 let news = [];
 
+// API 키들 (config.js에서 가져옴)
+const API_KEYS = {
+    FOOTBALL: CONFIG.FOOTBALL_API_KEY,
+    NEWS: CONFIG.NEWS_API_KEY,
+    TRANSLATE: CONFIG.TRANSLATE_API_KEY
+};
+
 // DOM 요소들
 const navBtns = document.querySelectorAll('.nav-btn');
 const tabContents = document.querySelectorAll('.tab-content');
@@ -66,20 +73,106 @@ function switchTab(tabName) {
     document.getElementById(tabName).classList.add('active');
 }
 
-// 경기 데이터 로드 (시뮬레이션)
-function loadMatches() {
+// 실제 경기 데이터 로드
+async function loadMatches() {
     matchesLoading.style.display = 'block';
     matchesGrid.innerHTML = '';
 
-    // 실제 API 호출 대신 시뮬레이션 데이터 사용
-    setTimeout(() => {
+    try {
+        // API 키가 설정되어 있으면 실제 데이터 가져오기
+        if (API_KEYS.FOOTBALL !== 'YOUR_API_FOOTBALL_KEY') {
+            matches = await fetchRealMatches();
+        } else {
+            // API 키가 없으면 시뮬레이션 데이터 사용
+            matches = generateMockMatches();
+        }
+        
+        displayMatches(matches);
+    } catch (error) {
+        console.error('경기 데이터 로드 실패:', error);
+        // 에러 발생시 시뮬레이션 데이터 사용
         matches = generateMockMatches();
         displayMatches(matches);
+    } finally {
         matchesLoading.style.display = 'none';
-    }, 1000);
+    }
 }
 
-// 시뮬레이션 경기 데이터 생성
+// 실제 축구 API 호출
+async function fetchRealMatches() {
+    const leagues = [
+        { id: 'kleague', apiId: 572, name: 'K리그' },
+        { id: 'premier', apiId: 39, name: '프리미어리그' },
+        { id: 'championship', apiId: 40, name: '챔피언십' }
+    ];
+
+    const allMatches = [];
+    const today = new Date();
+    const nextMonth = new Date(today.getTime() + 30 * 24 * 60 * 60 * 1000);
+
+    for (const league of leagues) {
+        try {
+            const response = await fetch(`https://api-football-v1.p.rapidapi.com/v3/fixtures?league=${league.apiId}&season=2024&from=${today.toISOString().split('T')[0]}&to=${nextMonth.toISOString().split('T')[0]}`, {
+                headers: {
+                    'X-RapidAPI-Key': API_KEYS.FOOTBALL,
+                    'X-RapidAPI-Host': 'api-football-v1.p.rapidapi.com'
+                }
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            const data = await response.json();
+            
+            if (data.response) {
+                data.response.forEach(fixture => {
+                    allMatches.push({
+                        id: fixture.fixture.id,
+                        league: league.id,
+                        leagueName: league.name,
+                        homeTeam: fixture.teams.home.name,
+                        awayTeam: fixture.teams.away.name,
+                        homeScore: fixture.goals.home || 0,
+                        awayScore: fixture.goals.away || 0,
+                        date: new Date(fixture.fixture.date),
+                        status: getFixtureStatus(fixture.fixture.status.short),
+                        venue: fixture.fixture.venue?.name || '미정',
+                        referee: fixture.fixture.referee || '미정'
+                    });
+                });
+            }
+        } catch (error) {
+            console.error(`${league.name} 데이터 로드 실패:`, error);
+        }
+    }
+
+    return allMatches.sort((a, b) => new Date(a.date) - new Date(b.date));
+}
+
+// 경기 상태 변환
+function getFixtureStatus(apiStatus) {
+    const statusMap = {
+        'NS': 'scheduled',    // Not Started
+        '1H': 'live',         // First Half
+        '2H': 'live',         // Second Half
+        'HT': 'live',         // Half Time
+        'FT': 'finished',     // Full Time
+        'AET': 'finished',    // After Extra Time
+        'PEN': 'finished',    // Penalties
+        'BT': 'live',         // Break Time
+        'SUSP': 'live',       // Suspended
+        'INT': 'live',        // Interrupted
+        'PST': 'scheduled',   // Postponed
+        'CANC': 'scheduled',  // Cancelled
+        'ABD': 'finished',    // Abandoned
+        'AWD': 'finished',    // Technical Loss
+        'WO': 'finished'      // Walkover
+    };
+    return statusMap[apiStatus] || 'scheduled';
+}
+
+// 시뮬레이션 경기 데이터 생성 (API 키가 없을 때 사용)
 function generateMockMatches() {
     const leagues = [
         { id: 'kleague', name: 'K리그', teams: ['울산현대', '전북현대', 'FC서울', '수원삼성', '포항스틸러스', '인천유나이티드', '대구FC', '광주FC', '제주유나이티드', '부산아이파크'] },
@@ -132,6 +225,11 @@ function generateMockMatches() {
 // 경기 표시
 function displayMatches(matchesToShow) {
     matchesGrid.innerHTML = '';
+    
+    if (matchesToShow.length === 0) {
+        matchesGrid.innerHTML = '<div class="no-data">표시할 경기가 없습니다.</div>';
+        return;
+    }
     
     matchesToShow.forEach(match => {
         const matchCard = createMatchCard(match);
@@ -187,20 +285,113 @@ function filterMatches(league) {
     displayMatches(filteredMatches);
 }
 
-// 뉴스 로드 (시뮬레이션)
-function loadNews() {
+// 실제 뉴스 로드
+async function loadNews() {
     newsLoading.style.display = 'block';
     newsGrid.innerHTML = '';
 
-    // 실제 API 호출 대신 시뮬레이션 데이터 사용
-    setTimeout(() => {
+    try {
+        // API 키가 설정되어 있으면 실제 데이터 가져오기
+        if (API_KEYS.NEWS !== 'YOUR_NEWS_API_KEY') {
+            news = await fetchRealNews();
+        } else {
+            // API 키가 없으면 시뮬레이션 데이터 사용
+            news = generateMockNews();
+        }
+        
+        displayNews(news);
+    } catch (error) {
+        console.error('뉴스 데이터 로드 실패:', error);
+        // 에러 발생시 시뮬레이션 데이터 사용
         news = generateMockNews();
         displayNews(news);
+    } finally {
         newsLoading.style.display = 'none';
-    }, 1500);
+    }
 }
 
-// 시뮬레이션 뉴스 데이터 생성
+// 실제 뉴스 API 호출
+async function fetchRealNews() {
+    try {
+        const response = await fetch(`https://newsapi.org/v2/everything?q=soccer+football&language=en&sortBy=publishedAt&pageSize=12&apiKey=${API_KEYS.NEWS}`);
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const data = await response.json();
+        
+        if (data.articles) {
+            const translatedNews = [];
+            
+            for (const article of data.articles.slice(0, 6)) {
+                try {
+                    // 제목과 설명을 한글로 번역
+                    const translatedTitle = await translateText(article.title);
+                    const translatedDescription = await translateText(article.description || '');
+                    
+                    translatedNews.push({
+                        title: translatedTitle,
+                        description: translatedDescription,
+                        source: article.source.name,
+                        publishedAt: new Date(article.publishedAt),
+                        url: article.url
+                    });
+                } catch (error) {
+                    console.error('번역 실패:', error);
+                    // 번역 실패시 원본 사용
+                    translatedNews.push({
+                        title: article.title,
+                        description: article.description || '',
+                        source: article.source.name,
+                        publishedAt: new Date(article.publishedAt),
+                        url: article.url
+                    });
+                }
+            }
+            
+            return translatedNews;
+        }
+        
+        return [];
+    } catch (error) {
+        console.error('뉴스 API 호출 실패:', error);
+        throw error;
+    }
+}
+
+// 텍스트 번역 (Google Translate API 사용)
+async function translateText(text) {
+    if (API_KEYS.TRANSLATE === 'YOUR_GOOGLE_TRANSLATE_KEY') {
+        return text; // API 키가 없으면 원본 반환
+    }
+
+    try {
+        const response = await fetch(`https://translation.googleapis.com/language/translate/v2?key=${API_KEYS.TRANSLATE}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                q: text,
+                target: 'ko',
+                source: 'en'
+            })
+        });
+
+        if (!response.ok) {
+            throw new Error(`Translation API error: ${response.status}`);
+        }
+
+        const data = await response.json();
+        return data.data.translations[0].translatedText;
+    } catch (error) {
+        console.error('번역 API 호출 실패:', error);
+        return text; // 번역 실패시 원본 반환
+    }
+}
+
+// 시뮬레이션 뉴스 데이터 생성 (API 키가 없을 때 사용)
 function generateMockNews() {
     const mockNews = [
         {
@@ -248,6 +439,11 @@ function generateMockNews() {
 function displayNews(newsToShow) {
     newsGrid.innerHTML = '';
     
+    if (newsToShow.length === 0) {
+        newsGrid.innerHTML = '<div class="no-data">표시할 뉴스가 없습니다.</div>';
+        return;
+    }
+    
     newsToShow.forEach(article => {
         const newsCard = createNewsCard(article);
         newsGrid.appendChild(newsCard);
@@ -274,6 +470,13 @@ function createNewsCard(article) {
             </div>
         </div>
     `;
+    
+    // 뉴스 링크가 있으면 클릭시 새 탭에서 열기
+    if (article.url) {
+        card.addEventListener('click', () => {
+            window.open(article.url, '_blank');
+        });
+    }
     
     return card;
 }
@@ -342,19 +545,6 @@ function getTimeAgo(date) {
     if (hours > 0) return `${hours}시간 전`;
     if (minutes > 0) return `${minutes}분 전`;
     return '방금 전';
-}
-
-// 실제 API 연동을 위한 함수들 (향후 구현)
-async function fetchRealMatches() {
-    // 실제 축구 API 호출 로직
-    // 예: API-Football, Football-Data.org 등
-    console.log('실제 경기 데이터를 가져오는 기능은 향후 구현 예정');
-}
-
-async function fetchRealNews() {
-    // 실제 뉴스 API 호출 로직
-    // 예: NewsAPI, Google News 등
-    console.log('실제 뉴스 데이터를 가져오는 기능은 향후 구현 예정');
 }
 
 // 자동 새로고침 (5분마다)

@@ -387,6 +387,18 @@ body {
     padding: 2rem;
 }
 
+/* 데이터 없음 메시지 */
+.no-data {
+    text-align: center;
+    padding: 3rem;
+    color: #666;
+    font-size: 1.1rem;
+    background: white;
+    border-radius: 15px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    grid-column: 1 / -1;
+}
+
 /* 푸터 */
 .footer {
     background: #333;

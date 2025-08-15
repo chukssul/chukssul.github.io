@@ -47,9 +47,29 @@ chukssul/
 
 ## 🚀 시작하기
 
+### 기본 사용법
 1. 프로젝트 클론 또는 다운로드
 2. `index.html` 파일을 웹 브라우저에서 열기
 3. 경기 일정과 뉴스 확인
+
+### 실제 데이터 사용하기 (선택사항)
+실제 축구 경기 일정과 뉴스를 보려면 API 키를 설정해야 합니다:
+
+1. **축구 데이터 API 키 발급**
+   - [API-Football](https://www.api-football.com/)에서 무료 계정 생성
+   - API 키 발급 후 `config.js` 파일의 `FOOTBALL_API_KEY`에 입력
+
+2. **뉴스 API 키 발급**
+   - [NewsAPI](https://newsapi.org/)에서 무료 계정 생성 (하루 1,000회 요청)
+   - API 키 발급 후 `config.js` 파일의 `NEWS_API_KEY`에 입력
+
+3. **번역 API 키 발급** (선택사항)
+   - [Google Cloud Translate](https://cloud.google.com/translate)에서 API 키 발급
+   - API 키 발급 후 `config.js` 파일의 `TRANSLATE_API_KEY`에 입력
+
+4. **설정 완료**
+   - API 키 설정 후 웹페이지를 새로고침하면 실제 데이터가 표시됩니다
+   - API 키가 없어도 시뮬레이션 데이터로 웹페이지를 사용할 수 있습니다
 
 ## 📱 사용법
 
