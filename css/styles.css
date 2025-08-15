@@ -336,6 +336,26 @@ body {
     color: #999;
 }
 
+.translate-btn {
+    background: #007bff;
+    color: white;
+    border: none;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 0.7rem;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+.translate-btn:hover {
+    background: #0056b3;
+}
+
+.translate-btn:disabled {
+    background: #ccc;
+    cursor: not-allowed;
+}
+
 .article-source {
     background: #f8f9fa;
     padding: 0.25rem 0.5rem;

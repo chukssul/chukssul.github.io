@@ -302,6 +302,7 @@ function createArticleCard(article) {
     card.className = 'article-card';
     
     const timeAgo = getTimeAgo(article.publishedAt);
+    const isTranslated = article.isTranslated || false;
     
     card.innerHTML = `
         <div class="article-image">
@@ -313,9 +314,20 @@ function createArticleCard(article) {
             <div class="article-meta">
                 <span class="article-source">${article.source}</span>
                 <span class="article-time">${timeAgo}</span>
+                <button class="translate-btn" data-article-id="${article.id}">
+                    <i class="fas fa-language"></i>
+                    ${isTranslated ? '원문' : '번역'}
+                </button>
             </div>
         </div>
     `;
+    
+    // 번역 버튼 이벤트 리스너
+    const translateBtn = card.querySelector('.translate-btn');
+    translateBtn.addEventListener('click', (e) => {
+        e.stopPropagation(); // 카드 클릭 이벤트 방지
+        toggleArticleTranslation(article, card);
+    });
     
     card.addEventListener('click', () => openArticleModal(article));
     return card;
@@ -341,6 +353,46 @@ function openMatchModal(match) {
     `;
     
     matchModal.style.display = 'block';
+}
+
+// 기사 번역 토글
+async function toggleArticleTranslation(article, card) {
+    const translateBtn = card.querySelector('.translate-btn');
+    const titleElement = card.querySelector('.article-title');
+    const descriptionElement = card.querySelector('.article-description');
+    
+    // 번역 중 표시
+    translateBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 번역중...';
+    translateBtn.disabled = true;
+    
+    try {
+        if (article.isTranslated) {
+            // 원문으로 되돌리기
+            titleElement.textContent = article.originalTitle || article.title;
+            descriptionElement.textContent = article.originalDescription || article.description;
+            article.isTranslated = false;
+            translateBtn.innerHTML = '<i class="fas fa-language"></i> 번역';
+        } else {
+            // 번역하기
+            const translatedArticle = await window.articleTranslator.translateArticle(article);
+            
+            // 원문 저장
+            article.originalTitle = article.title;
+            article.originalDescription = article.description;
+            
+            // 번역된 내용으로 업데이트
+            titleElement.textContent = translatedArticle.title;
+            descriptionElement.textContent = translatedArticle.description;
+            article.isTranslated = true;
+            translateBtn.innerHTML = '<i class="fas fa-language"></i> 원문';
+        }
+    } catch (error) {
+        console.error('번역 토글 실패:', error);
+        alert('번역에 실패했습니다. 잠시 후 다시 시도해주세요.');
+        translateBtn.innerHTML = '<i class="fas fa-language"></i> 번역';
+    } finally {
+        translateBtn.disabled = false;
+    }
 }
 
 // 기사 모달 열기
