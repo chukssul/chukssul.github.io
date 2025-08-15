@@ -3,11 +3,23 @@ let currentLeague = 'all';
 let matches = [];
 let news = [];
 
-// API 키들 (config.js에서 가져옴)
-const API_KEYS = {
-    FOOTBALL: CONFIG.FOOTBALL_API_KEY,
-    NEWS: CONFIG.NEWS_API_KEY,
-    TRANSLATE: CONFIG.TRANSLATE_API_KEY
+// 크롤링 설정
+const CRAWLING_CONFIG = {
+    // 프록시 서버 (CORS 우회용)
+    PROXY_URL: 'https://api.allorigins.win/raw?url=',
+    
+    // 크롤링할 사이트들
+    FOOTBALL_SITES: {
+        kleague: 'https://www.kleague.com/schedule',
+        premier: 'https://www.premierleague.com/fixtures',
+        championship: 'https://www.efl.com/fixtures'
+    },
+    
+    NEWS_SITES: [
+        'https://www.espn.com/soccer/',
+        'https://www.bbc.com/sport/football',
+        'https://www.goal.com/en/news'
+    ]
 };
 
 // DOM 요소들
@@ -73,20 +85,17 @@ function switchTab(tabName) {
     document.getElementById(tabName).classList.add('active');
 }
 
-// 실제 경기 데이터 로드
+// 실제 경기 데이터 로드 (크롤링)
 async function loadMatches() {
     matchesLoading.style.display = 'block';
     matchesGrid.innerHTML = '';
 
     try {
-        // API 키가 설정되어 있으면 실제 데이터 가져오기
-        if (API_KEYS.FOOTBALL !== 'YOUR_API_FOOTBALL_KEY') {
-            matches = await fetchRealMatches();
-        } else {
-            // API 키가 없으면 시뮬레이션 데이터 사용
+        matches = await crawlRealMatches();
+        if (matches.length === 0) {
+            // 크롤링 실패시 시뮬레이션 데이터 사용
             matches = generateMockMatches();
         }
-        
         displayMatches(matches);
     } catch (error) {
         console.error('경기 데이터 로드 실패:', error);
@@ -98,81 +107,179 @@ async function loadMatches() {
     }
 }
 
-// 실제 축구 API 호출
-async function fetchRealMatches() {
-    const leagues = [
-        { id: 'kleague', apiId: 572, name: 'K리그' },
-        { id: 'premier', apiId: 39, name: '프리미어리그' },
-        { id: 'championship', apiId: 40, name: '챔피언십' }
-    ];
-
+// 실제 축구 사이트 크롤링
+async function crawlRealMatches() {
     const allMatches = [];
-    const today = new Date();
-    const nextMonth = new Date(today.getTime() + 30 * 24 * 60 * 60 * 1000);
-
-    for (const league of leagues) {
-        try {
-            const response = await fetch(`https://api-football-v1.p.rapidapi.com/v3/fixtures?league=${league.apiId}&season=2024&from=${today.toISOString().split('T')[0]}&to=${nextMonth.toISOString().split('T')[0]}`, {
-                headers: {
-                    'X-RapidAPI-Key': API_KEYS.FOOTBALL,
-                    'X-RapidAPI-Host': 'api-football-v1.p.rapidapi.com'
-                }
-            });
-
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-
-            const data = await response.json();
-            
-            if (data.response) {
-                data.response.forEach(fixture => {
-                    allMatches.push({
-                        id: fixture.fixture.id,
-                        league: league.id,
-                        leagueName: league.name,
-                        homeTeam: fixture.teams.home.name,
-                        awayTeam: fixture.teams.away.name,
-                        homeScore: fixture.goals.home || 0,
-                        awayScore: fixture.goals.away || 0,
-                        date: new Date(fixture.fixture.date),
-                        status: getFixtureStatus(fixture.fixture.status.short),
-                        venue: fixture.fixture.venue?.name || '미정',
-                        referee: fixture.fixture.referee || '미정'
-                    });
-                });
-            }
-        } catch (error) {
-            console.error(`${league.name} 데이터 로드 실패:`, error);
-        }
+    
+    try {
+        // K리그 크롤링 시도
+        const kleagueMatches = await crawlKLeague();
+        allMatches.push(...kleagueMatches);
+        
+        // 프리미어리그 크롤링 시도
+        const premierMatches = await crawlPremierLeague();
+        allMatches.push(...premierMatches);
+        
+        // 챔피언십 크롤링 시도
+        const championshipMatches = await crawlChampionship();
+        allMatches.push(...championshipMatches);
+        
+    } catch (error) {
+        console.error('크롤링 중 오류 발생:', error);
     }
-
+    
     return allMatches.sort((a, b) => new Date(a.date) - new Date(b.date));
 }
 
-// 경기 상태 변환
-function getFixtureStatus(apiStatus) {
-    const statusMap = {
-        'NS': 'scheduled',    // Not Started
-        '1H': 'live',         // First Half
-        '2H': 'live',         // Second Half
-        'HT': 'live',         // Half Time
-        'FT': 'finished',     // Full Time
-        'AET': 'finished',    // After Extra Time
-        'PEN': 'finished',    // Penalties
-        'BT': 'live',         // Break Time
-        'SUSP': 'live',       // Suspended
-        'INT': 'live',        // Interrupted
-        'PST': 'scheduled',   // Postponed
-        'CANC': 'scheduled',  // Cancelled
-        'ABD': 'finished',    // Abandoned
-        'AWD': 'finished',    // Technical Loss
-        'WO': 'finished'      // Walkover
-    };
-    return statusMap[apiStatus] || 'scheduled';
+// K리그 크롤링
+async function crawlKLeague() {
+    try {
+        const response = await fetch(CRAWLING_CONFIG.PROXY_URL + encodeURIComponent(CRAWLING_CONFIG.FOOTBALL_SITES.kleague));
+        const html = await response.text();
+        
+        // HTML 파싱 (간단한 정규식 사용)
+        const matches = [];
+        const matchPattern = /<div[^>]*class="[^"]*match[^"]*"[^>]*>([\s\S]*?)<\/div>/gi;
+        let match;
+        
+        while ((match = matchPattern.exec(html)) !== null) {
+            const matchHtml = match[1];
+            
+            // 팀명 추출
+            const homeTeamMatch = matchHtml.match(/<span[^>]*class="[^"]*home[^"]*"[^>]*>([^<]+)<\/span>/i);
+            const awayTeamMatch = matchHtml.match(/<span[^>]*class="[^"]*away[^"]*"[^>]*>([^<]+)<\/span>/i);
+            
+            if (homeTeamMatch && awayTeamMatch) {
+                const homeTeam = homeTeamMatch[1].trim();
+                const awayTeam = awayTeamMatch[1].trim();
+                
+                // 날짜 추출
+                const dateMatch = matchHtml.match(/<span[^>]*class="[^"]*date[^"]*"[^>]*>([^<]+)<\/span>/i);
+                const date = dateMatch ? new Date(dateMatch[1].trim()) : new Date();
+                
+                matches.push({
+                    id: `kleague-${matches.length}`,
+                    league: 'kleague',
+                    leagueName: 'K리그',
+                    homeTeam: homeTeam,
+                    awayTeam: awayTeam,
+                    homeScore: 0,
+                    awayScore: 0,
+                    date: date,
+                    status: 'scheduled',
+                    venue: 'K리그 경기장',
+                    referee: '주심'
+                });
+            }
+        }
+        
+        return matches.slice(0, 10); // 최대 10개 경기만 반환
+        
+    } catch (error) {
+        console.error('K리그 크롤링 실패:', error);
+        return [];
+    }
 }
 
-// 시뮬레이션 경기 데이터 생성 (API 키가 없을 때 사용)
+// 프리미어리그 크롤링
+async function crawlPremierLeague() {
+    try {
+        const response = await fetch(CRAWLING_CONFIG.PROXY_URL + encodeURIComponent(CRAWLING_CONFIG.FOOTBALL_SITES.premier));
+        const html = await response.text();
+        
+        const matches = [];
+        const matchPattern = /<div[^>]*class="[^"]*fixture[^"]*"[^>]*>([\s\S]*?)<\/div>/gi;
+        let match;
+        
+        while ((match = matchPattern.exec(html)) !== null) {
+            const matchHtml = match[1];
+            
+            // 팀명 추출
+            const homeTeamMatch = matchHtml.match(/<span[^>]*class="[^"]*home[^"]*"[^>]*>([^<]+)<\/span>/i);
+            const awayTeamMatch = matchHtml.match(/<span[^>]*class="[^"]*away[^"]*"[^>]*>([^<]+)<\/span>/i);
+            
+            if (homeTeamMatch && awayTeamMatch) {
+                const homeTeam = homeTeamMatch[1].trim();
+                const awayTeam = awayTeamMatch[1].trim();
+                
+                // 날짜 추출
+                const dateMatch = matchHtml.match(/<span[^>]*class="[^"]*date[^"]*"[^>]*>([^<]+)<\/span>/i);
+                const date = dateMatch ? new Date(dateMatch[1].trim()) : new Date();
+                
+                matches.push({
+                    id: `premier-${matches.length}`,
+                    league: 'premier',
+                    leagueName: '프리미어리그',
+                    homeTeam: homeTeam,
+                    awayTeam: awayTeam,
+                    homeScore: 0,
+                    awayScore: 0,
+                    date: date,
+                    status: 'scheduled',
+                    venue: '프리미어리그 경기장',
+                    referee: '주심'
+                });
+            }
+        }
+        
+        return matches.slice(0, 10);
+        
+    } catch (error) {
+        console.error('프리미어리그 크롤링 실패:', error);
+        return [];
+    }
+}
+
+// 챔피언십 크롤링
+async function crawlChampionship() {
+    try {
+        const response = await fetch(CRAWLING_CONFIG.PROXY_URL + encodeURIComponent(CRAWLING_CONFIG.FOOTBALL_SITES.championship));
+        const html = await response.text();
+        
+        const matches = [];
+        const matchPattern = /<div[^>]*class="[^"]*fixture[^"]*"[^>]*>([\s\S]*?)<\/div>/gi;
+        let match;
+        
+        while ((match = matchPattern.exec(html)) !== null) {
+            const matchHtml = match[1];
+            
+            // 팀명 추출
+            const homeTeamMatch = matchHtml.match(/<span[^>]*class="[^"]*home[^"]*"[^>]*>([^<]+)<\/span>/i);
+            const awayTeamMatch = matchHtml.match(/<span[^>]*class="[^"]*away[^"]*"[^>]*>([^<]+)<\/span>/i);
+            
+            if (homeTeamMatch && awayTeamMatch) {
+                const homeTeam = homeTeamMatch[1].trim();
+                const awayTeam = awayTeamMatch[1].trim();
+                
+                // 날짜 추출
+                const dateMatch = matchHtml.match(/<span[^>]*class="[^"]*date[^"]*"[^>]*>([^<]+)<\/span>/i);
+                const date = dateMatch ? new Date(dateMatch[1].trim()) : new Date();
+                
+                matches.push({
+                    id: `championship-${matches.length}`,
+                    league: 'championship',
+                    leagueName: '챔피언십',
+                    homeTeam: homeTeam,
+                    awayTeam: awayTeam,
+                    homeScore: 0,
+                    awayScore: 0,
+                    date: date,
+                    status: 'scheduled',
+                    venue: '챔피언십 경기장',
+                    referee: '주심'
+                });
+            }
+        }
+        
+        return matches.slice(0, 10);
+        
+    } catch (error) {
+        console.error('챔피언십 크롤링 실패:', error);
+        return [];
+    }
+}
+
+// 시뮬레이션 경기 데이터 생성 (크롤링 실패시 사용)
 function generateMockMatches() {
     const leagues = [
         { id: 'kleague', name: 'K리그', teams: ['울산현대', '전북현대', 'FC서울', '수원삼성', '포항스틸러스', '인천유나이티드', '대구FC', '광주FC', '제주유나이티드', '부산아이파크'] },
@@ -285,20 +392,17 @@ function filterMatches(league) {
     displayMatches(filteredMatches);
 }
 
-// 실제 뉴스 로드
+// 실제 뉴스 로드 (크롤링)
 async function loadNews() {
     newsLoading.style.display = 'block';
     newsGrid.innerHTML = '';
 
     try {
-        // API 키가 설정되어 있으면 실제 데이터 가져오기
-        if (API_KEYS.NEWS !== 'YOUR_NEWS_API_KEY') {
-            news = await fetchRealNews();
-        } else {
-            // API 키가 없으면 시뮬레이션 데이터 사용
+        news = await crawlRealNews();
+        if (news.length === 0) {
+            // 크롤링 실패시 시뮬레이션 데이터 사용
             news = generateMockNews();
         }
-        
         displayNews(news);
     } catch (error) {
         console.error('뉴스 데이터 로드 실패:', error);
@@ -310,88 +414,163 @@ async function loadNews() {
     }
 }
 
-// 실제 뉴스 API 호출
-async function fetchRealNews() {
+// 실제 뉴스 크롤링
+async function crawlRealNews() {
+    const allNews = [];
+    
     try {
-        const response = await fetch(`https://newsapi.org/v2/everything?q=soccer+football&language=en&sortBy=publishedAt&pageSize=12&apiKey=${API_KEYS.NEWS}`);
+        // ESPN 크롤링
+        const espnNews = await crawlESPN();
+        allNews.push(...espnNews);
         
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
+        // BBC 크롤링
+        const bbcNews = await crawlBBC();
+        allNews.push(...bbcNews);
+        
+        // Goal.com 크롤링
+        const goalNews = await crawlGoal();
+        allNews.push(...goalNews);
+        
+    } catch (error) {
+        console.error('뉴스 크롤링 중 오류 발생:', error);
+    }
+    
+    return allNews.sort((a, b) => b.publishedAt - a.publishedAt).slice(0, 6);
+}
 
-        const data = await response.json();
+// ESPN 크롤링
+async function crawlESPN() {
+    try {
+        const response = await fetch(CRAWLING_CONFIG.PROXY_URL + encodeURIComponent(CRAWLING_CONFIG.NEWS_SITES[0]));
+        const html = await response.text();
         
-        if (data.articles) {
-            const translatedNews = [];
+        const news = [];
+        const articlePattern = /<article[^>]*>([\s\S]*?)<\/article>/gi;
+        let article;
+        
+        while ((article = articlePattern.exec(html)) !== null && news.length < 2) {
+            const articleHtml = article[1];
             
-            for (const article of data.articles.slice(0, 6)) {
-                try {
-                    // 제목과 설명을 한글로 번역
-                    const translatedTitle = await translateText(article.title);
-                    const translatedDescription = await translateText(article.description || '');
-                    
-                    translatedNews.push({
-                        title: translatedTitle,
-                        description: translatedDescription,
-                        source: article.source.name,
-                        publishedAt: new Date(article.publishedAt),
-                        url: article.url
-                    });
-                } catch (error) {
-                    console.error('번역 실패:', error);
-                    // 번역 실패시 원본 사용
-                    translatedNews.push({
-                        title: article.title,
-                        description: article.description || '',
-                        source: article.source.name,
-                        publishedAt: new Date(article.publishedAt),
-                        url: article.url
-                    });
-                }
+            // 제목 추출
+            const titleMatch = articleHtml.match(/<h[1-6][^>]*>([^<]+)<\/h[1-6]>/i);
+            if (titleMatch) {
+                const title = titleMatch[1].trim();
+                
+                // 설명 추출
+                const descMatch = articleHtml.match(/<p[^>]*>([^<]+)<\/p>/i);
+                const description = descMatch ? descMatch[1].trim() : '';
+                
+                // 링크 추출
+                const linkMatch = articleHtml.match(/<a[^>]*href="([^"]*)"[^>]*>/i);
+                const url = linkMatch ? linkMatch[1] : '';
+                
+                news.push({
+                    title: title,
+                    description: description,
+                    source: 'ESPN',
+                    publishedAt: new Date(),
+                    url: url.startsWith('http') ? url : 'https://www.espn.com' + url
+                });
             }
-            
-            return translatedNews;
         }
         
+        return news;
+        
+    } catch (error) {
+        console.error('ESPN 크롤링 실패:', error);
         return [];
-    } catch (error) {
-        console.error('뉴스 API 호출 실패:', error);
-        throw error;
     }
 }
 
-// 텍스트 번역 (Google Translate API 사용)
-async function translateText(text) {
-    if (API_KEYS.TRANSLATE === 'YOUR_GOOGLE_TRANSLATE_KEY') {
-        return text; // API 키가 없으면 원본 반환
-    }
-
+// BBC 크롤링
+async function crawlBBC() {
     try {
-        const response = await fetch(`https://translation.googleapis.com/language/translate/v2?key=${API_KEYS.TRANSLATE}`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                q: text,
-                target: 'ko',
-                source: 'en'
-            })
-        });
-
-        if (!response.ok) {
-            throw new Error(`Translation API error: ${response.status}`);
+        const response = await fetch(CRAWLING_CONFIG.PROXY_URL + encodeURIComponent(CRAWLING_CONFIG.NEWS_SITES[1]));
+        const html = await response.text();
+        
+        const news = [];
+        const articlePattern = /<article[^>]*>([\s\S]*?)<\/article>/gi;
+        let article;
+        
+        while ((article = articlePattern.exec(html)) !== null && news.length < 2) {
+            const articleHtml = article[1];
+            
+            // 제목 추출
+            const titleMatch = articleHtml.match(/<h[1-6][^>]*>([^<]+)<\/h[1-6]>/i);
+            if (titleMatch) {
+                const title = titleMatch[1].trim();
+                
+                // 설명 추출
+                const descMatch = articleHtml.match(/<p[^>]*>([^<]+)<\/p>/i);
+                const description = descMatch ? descMatch[1].trim() : '';
+                
+                // 링크 추출
+                const linkMatch = articleHtml.match(/<a[^>]*href="([^"]*)"[^>]*>/i);
+                const url = linkMatch ? linkMatch[1] : '';
+                
+                news.push({
+                    title: title,
+                    description: description,
+                    source: 'BBC Sport',
+                    publishedAt: new Date(),
+                    url: url.startsWith('http') ? url : 'https://www.bbc.com' + url
+                });
+            }
         }
-
-        const data = await response.json();
-        return data.data.translations[0].translatedText;
+        
+        return news;
+        
     } catch (error) {
-        console.error('번역 API 호출 실패:', error);
-        return text; // 번역 실패시 원본 반환
+        console.error('BBC 크롤링 실패:', error);
+        return [];
     }
 }
 
-// 시뮬레이션 뉴스 데이터 생성 (API 키가 없을 때 사용)
+// Goal.com 크롤링
+async function crawlGoal() {
+    try {
+        const response = await fetch(CRAWLING_CONFIG.PROXY_URL + encodeURIComponent(CRAWLING_CONFIG.NEWS_SITES[2]));
+        const html = await response.text();
+        
+        const news = [];
+        const articlePattern = /<article[^>]*>([\s\S]*?)<\/article>/gi;
+        let article;
+        
+        while ((article = articlePattern.exec(html)) !== null && news.length < 2) {
+            const articleHtml = article[1];
+            
+            // 제목 추출
+            const titleMatch = articleHtml.match(/<h[1-6][^>]*>([^<]+)<\/h[1-6]>/i);
+            if (titleMatch) {
+                const title = titleMatch[1].trim();
+                
+                // 설명 추출
+                const descMatch = articleHtml.match(/<p[^>]*>([^<]+)<\/p>/i);
+                const description = descMatch ? descMatch[1].trim() : '';
+                
+                // 링크 추출
+                const linkMatch = articleHtml.match(/<a[^>]*href="([^"]*)"[^>]*>/i);
+                const url = linkMatch ? linkMatch[1] : '';
+                
+                news.push({
+                    title: title,
+                    description: description,
+                    source: 'Goal.com',
+                    publishedAt: new Date(),
+                    url: url.startsWith('http') ? url : 'https://www.goal.com' + url
+                });
+            }
+        }
+        
+        return news;
+        
+    } catch (error) {
+        console.error('Goal.com 크롤링 실패:', error);
+        return [];
+    }
+}
+
+// 시뮬레이션 뉴스 데이터 생성 (크롤링 실패시 사용)
 function generateMockNews() {
     const mockNews = [
         {
