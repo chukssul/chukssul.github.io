@@ -1,102 +1,103 @@
-# ⚽ 축썰닷컴
+# 축구 경기 일정 & 뉴스 웹페이지
 
-> 축구에 대한 포스팅을 올리고 댓글로 자유롭게 소통할 수 있는 웹 커뮤니티
+세계 축구 경기 일정과 최신 축구 뉴스를 한눈에 볼 수 있는 웹페이지입니다.
 
-## 🌐 웹사이트 바로가기
-**👉 [https://chukssul.github.io](https://chukssul.github.io)**
+## 🚀 주요 기능
 
----
+### 📅 경기 일정
+- **K리그**: 한국 프로축구 리그 경기 일정
+- **프리미어리그**: 영국 최고 리그 경기 일정  
+- **챔피언십**: 영국 2부 리그 경기 일정
+- 경기 상태 표시 (예정/진행중/종료)
+- 리그별 필터링 기능
+- 경기 상세 정보 모달
 
-## ✨ 주요 기능
-
-| 기능 | 설명 |
-|------|------|
-| 📝 **포스트 작성** | 좋아하는 선수에 대한 글을 자유롭게 작성 |
-| 📸 **이미지 업로드** | 포스트에 이미지 첨부 (최대 5MB) |
-| 🏷️ **태그 시스템** | 태그 추가 및 필터링, 자동완성 지원 |
-| 👍👎 **좋아요/싫어요** | 포스트에 반응 표시 |
-| 💬 **댓글 시스템** | 실시간 댓글 작성 및 소통 |
-| 🔍 **검색 기능** | 선수 이름, 제목, 내용으로 검색 |
-| 📊 **정렬 기능** | 최신순, 좋아요순, 댓글순 정렬 |
-| 👤 **사용자 프로필** | 개인 프로필 및 활동 통계 |
-| 🌙 **다크모드** | 라이트/다크 테마 전환 |
-| 📱 **반응형 디자인** | 모든 기기에서 최적화된 경험 |
-
-## 🚀 빠른 시작
-
-1. **웹사이트 접속**: [https://chukssul.github.io](https://chukssul.github.io)
-2. **프로필 설정**: 닉네임과 개인정보 입력
-3. **포스트 작성**: 이미지와 태그를 포함한 글 작성
-4. **커뮤니티 참여**: 좋아요, 댓글로 소통
+### 📰 축구 뉴스
+- 최신 축구 관련 뉴스
+- 한글 번역 제공
+- 뉴스 소스별 분류
+- 실시간 새로고침 기능
 
 ## 🛠️ 기술 스택
 
-- **Frontend**: HTML5, CSS3, JavaScript (ES6+)
-- **Storage**: Browser Local Storage
-- **Hosting**: GitHub Pages
-- **Design**: 반응형 웹 디자인, 글래스모피즘
+- **HTML5**: 시맨틱 마크업
+- **CSS3**: 반응형 디자인, Flexbox, Grid
+- **JavaScript (ES6+)**: 모듈화된 코드 구조
+- **Font Awesome**: 아이콘
+- **Google Fonts**: Noto Sans KR 폰트
 
-## 📂 프로젝트 구조
+## 📁 프로젝트 구조
 
 ```
-/
+chukssul/
 ├── index.html          # 메인 HTML 파일
 ├── css/
 │   └── styles.css      # 스타일시트
 ├── js/
-│   └── script.js       # JavaScript 로직
-├── images/             # 이미지 저장소
-├── docs/               # 프로젝트 문서
-└── .gitignore          # Git 설정
+│   └── app.js          # JavaScript 애플리케이션
+└── README.md           # 프로젝트 설명서
 ```
 
-## 🎮 샘플 데이터
+## 🎨 디자인 특징
 
-첫 방문 시 제공되는 데모 포스트:
-- 🇰🇷 **손흥민** (프리미어리그, 토트넘)
-- 🇦🇷 **메시** (MLS, 바르셀로나)  
-- 🇰🇷 **김민재** (분데스리가, 바이에른뮌헨)
+- **모던한 UI/UX**: 깔끔하고 직관적인 인터페이스
+- **반응형 디자인**: 모바일, 태블릿, 데스크톱 지원
+- **다크 테마**: 눈의 피로도를 줄이는 색상 구성
+- **애니메이션**: 부드러운 전환 효과
 
-## 🔒 개인정보 보호
+## 🚀 시작하기
 
-- ✅ **완전한 클라이언트 사이드**: 모든 데이터는 사용자 브라우저에만 저장
-- ✅ **서버 전송 없음**: 개인정보 외부 전송 없음
-- ✅ **로컬 스토리지**: 안전한 브라우저 저장소 사용
+1. 프로젝트 클론 또는 다운로드
+2. `index.html` 파일을 웹 브라우저에서 열기
+3. 경기 일정과 뉴스 확인
+
+## 📱 사용법
+
+### 경기 일정 보기
+1. "경기 일정" 탭 클릭
+2. 리그 필터 버튼으로 원하는 리그 선택
+3. 경기 카드 클릭하여 상세 정보 확인
+
+### 뉴스 보기
+1. "축구 뉴스" 탭 클릭
+2. "새로고침" 버튼으로 최신 뉴스 업데이트
+3. 뉴스 카드 클릭하여 전체 내용 확인
+
+## 🔮 향후 개발 계획
+
+### 실제 API 연동
+- **축구 데이터**: API-Football, Football-Data.org
+- **뉴스 데이터**: NewsAPI, Google News API
+- **번역 서비스**: Google Translate API
+
+### 추가 기능
+- 실시간 경기 스코어 업데이트
+- 팀별 경기 일정 캘린더
+- 선수 정보 및 통계
+- 사용자 알림 설정
+- 다크/라이트 테마 전환
+
+### 성능 최적화
+- 이미지 지연 로딩
+- 캐싱 전략
+- PWA 지원
 
 ## 🤝 기여하기
 
-이 프로젝트에 기여하고 싶으시다면:
-
-1. **Fork** 이 레포지토리
-2. **Feature Branch** 생성: `git checkout -b feature/amazing-feature`
-3. **Commit** 변경사항: `git commit -m 'Add amazing feature'`
-4. **Push** to Branch: `git push origin feature/amazing-feature`
-5. **Pull Request** 생성
-
-## 📞 문의 및 지원
-
-- 🐛 **버그 리포트**: [GitHub Issues](https://github.com/chukssul/chukssul.github.io/issues)
-- 💡 **기능 요청**: [GitHub Issues](https://github.com/chukssul/chukssul.github.io/issues)
-- 📖 **상세 문서**: [docs/README.md](docs/README.md)
+1. Fork the Project
+2. Create your Feature Branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your Changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the Branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
 
 ## 📄 라이선스
 
-이 프로젝트는 **MIT 라이선스** 하에 배포됩니다.
+이 프로젝트는 MIT 라이선스 하에 배포됩니다. 자세한 내용은 `LICENSE` 파일을 참조하세요.
+
+## 📞 문의
+
+프로젝트에 대한 문의사항이나 제안사항이 있으시면 언제든지 연락주세요.
 
 ---
 
-<div align="center">
-
-### 🌟 지금 바로 체험해보세요!
-
-**[https://chukssul.github.io](https://chukssul.github.io)**
-
-*전 세계 축구 팬들과 함께 소통하는 공간*
-
-</div>
-
----
-
-<div align="center">
-<sub>Made with ❤️ by chukssul | Powered by GitHub Pages</sub>
-</div> 
+**축구 경기 일정 & 뉴스** - 축구 팬들을 위한 완벽한 정보 허브 ⚽ 
