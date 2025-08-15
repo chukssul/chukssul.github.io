@@ -102,6 +102,8 @@ async function loadMatches() {
     matchesGrid.innerHTML = '';
 
     try {
+        console.log('경기 데이터 크롤링 시작...');
+        
         // 실제 크롤링 시도 (타임아웃 설정)
         const timeout = CRAWLING_CONFIG.CRAWLING_SETTINGS?.TIMEOUT || 20000;
         const timeoutPromise = new Promise((_, reject) => 
@@ -113,17 +115,32 @@ async function loadMatches() {
         matches = await Promise.race([crawlingPromise, timeoutPromise]);
         
         if (matches.length === 0) {
-            // 크롤링 실패시 빈 화면 표시
-            matchesGrid.innerHTML = '<div class="no-data">실제 경기 데이터를 불러올 수 없습니다. 잠시 후 다시 시도해주세요.</div>';
-            return;
+            console.log('크롤링 실패, 폴백 데이터 사용');
+            // 크롤링 실패시 폴백 데이터 사용
+            matches = CRAWLING_CONFIG.FALLBACK_DATA?.MATCHES || [];
+            if (matches.length === 0) {
+                matchesGrid.innerHTML = '<div class="no-data">경기 데이터를 불러올 수 없습니다. 잠시 후 다시 시도해주세요.</div>';
+                return;
+            }
         }
+        
+        console.log(`${matches.length}개의 경기 데이터 로드 완료`);
         
         // 시간 기준으로 정렬
         matches.sort((a, b) => new Date(a.date) - new Date(b.date));
         displayMatches(matches);
     } catch (error) {
         console.error('경기 데이터 로드 실패:', error);
-        matchesGrid.innerHTML = '<div class="no-data">실제 경기 데이터를 불러올 수 없습니다. 잠시 후 다시 시도해주세요.</div>';
+        
+        // 에러 발생시 폴백 데이터 사용
+        matches = CRAWLING_CONFIG.FALLBACK_DATA?.MATCHES || [];
+        if (matches.length > 0) {
+            console.log('폴백 데이터로 경기 표시');
+            matches.sort((a, b) => new Date(a.date) - new Date(b.date));
+            displayMatches(matches);
+        } else {
+            matchesGrid.innerHTML = '<div class="no-data">경기 데이터를 불러올 수 없습니다. 잠시 후 다시 시도해주세요.</div>';
+        }
     } finally {
         matchesLoading.style.display = 'none';
     }
@@ -136,49 +153,61 @@ async function crawlRealMatches() {
     // 실제 웹사이트 크롤링만 시도
     for (let i = 0; i < CRAWLING_CONFIG.FOOTBALL_SITES.length; i++) {
         const site = CRAWLING_CONFIG.FOOTBALL_SITES[i];
-        const proxyUrl = CRAWLING_CONFIG.PROXY_URLS[i % CRAWLING_CONFIG.PROXY_URLS.length];
         
-        try {
-            console.log(`웹 크롤링 시도: ${site}`);
+        // 여러 프록시 서비스를 순차적으로 시도
+        let success = false;
+        for (let j = 0; j < CRAWLING_CONFIG.PROXY_URLS.length; j++) {
+            const proxyUrl = CRAWLING_CONFIG.PROXY_URLS[j];
             
-            // User-Agent 랜덤 선택
-            const userAgent = CRAWLING_CONFIG.USER_AGENTS ? 
-                CRAWLING_CONFIG.USER_AGENTS[Math.floor(Math.random() * CRAWLING_CONFIG.USER_AGENTS.length)] :
-                'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
-            
-            const response = await fetch(proxyUrl + encodeURIComponent(site), {
-                method: 'GET',
-                headers: {
-                    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-                    'Accept-Language': 'en-US,en;q=0.5',
-                    'Accept-Encoding': 'gzip, deflate',
-                    'Connection': 'keep-alive',
-                    'User-Agent': userAgent,
-                    'Cache-Control': 'no-cache',
-                    'Pragma': 'no-cache'
+            try {
+                console.log(`웹 크롤링 시도: ${site} (프록시 ${j + 1}/${CRAWLING_CONFIG.PROXY_URLS.length})`);
+                
+                // User-Agent 랜덤 선택
+                const userAgent = CRAWLING_CONFIG.USER_AGENTS ? 
+                    CRAWLING_CONFIG.USER_AGENTS[Math.floor(Math.random() * CRAWLING_CONFIG.USER_AGENTS.length)] :
+                    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
+                
+                const response = await fetch(proxyUrl + encodeURIComponent(site), {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                        'Accept-Language': 'en-US,en;q=0.5',
+                        'Accept-Encoding': 'gzip, deflate',
+                        'Connection': 'keep-alive',
+                        'User-Agent': userAgent,
+                        'Cache-Control': 'no-cache',
+                        'Pragma': 'no-cache'
+                    }
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
                 }
-            });
-            
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
+                
+                const html = await response.text();
+                console.log(`크롤링 성공: ${site}, HTML 길이: ${html.length}`);
+                
+                const siteMatches = parseMatchesFromHTML(html, site);
+                allMatches.push(...siteMatches);
+                
+                success = true;
+                break; // 성공하면 다음 프록시로 넘어가지 않음
+                
+            } catch (error) {
+                console.error(`프록시 ${j + 1} 크롤링 실패: ${site}`, error);
+                continue; // 다음 프록시로 시도
             }
-            
-            const html = await response.text();
-            console.log(`크롤링 성공: ${site}, HTML 길이: ${html.length}`);
-            
-            const siteMatches = parseMatchesFromHTML(html, site);
-            allMatches.push(...siteMatches);
-            
-            if (allMatches.length >= (CRAWLING_CONFIG.CRAWLING_SETTINGS?.MAX_MATCHES_PER_LEAGUE || 20)) break;
-            
-            // 요청 간 지연시간
-            if (CRAWLING_CONFIG.CRAWLING_SETTINGS?.DELAY_BETWEEN_REQUESTS) {
-                await new Promise(resolve => setTimeout(resolve, CRAWLING_CONFIG.CRAWLING_SETTINGS.DELAY_BETWEEN_REQUESTS));
-            }
-            
-        } catch (error) {
-            console.error(`사이트 크롤링 실패: ${site}`, error);
-            continue; // 다음 사이트로 계속
+        }
+        
+        if (!success) {
+            console.error(`모든 프록시 실패: ${site}`);
+        }
+        
+        if (allMatches.length >= (CRAWLING_CONFIG.CRAWLING_SETTINGS?.MAX_MATCHES_PER_LEAGUE || 20)) break;
+        
+        // 요청 간 지연시간
+        if (CRAWLING_CONFIG.CRAWLING_SETTINGS?.DELAY_BETWEEN_REQUESTS) {
+            await new Promise(resolve => setTimeout(resolve, CRAWLING_CONFIG.CRAWLING_SETTINGS.DELAY_BETWEEN_REQUESTS));
         }
     }
     
@@ -568,6 +597,8 @@ async function loadArticles() {
     articlesGrid.innerHTML = '';
 
     try {
+        console.log('기사 데이터 크롤링 시작...');
+        
         // 실제 크롤링 시도 (타임아웃 설정)
         const timeout = CRAWLING_CONFIG.CRAWLING_SETTINGS?.TIMEOUT || 20000;
         const timeoutPromise = new Promise((_, reject) => 
@@ -579,14 +610,28 @@ async function loadArticles() {
         articles = await Promise.race([crawlingPromise, timeoutPromise]);
         
         if (articles.length === 0) {
-            // 크롤링 실패시 빈 화면 표시
-            articlesGrid.innerHTML = '<div class="no-data">실제 뉴스 데이터를 불러올 수 없습니다. 잠시 후 다시 시도해주세요.</div>';
-            return;
+            console.log('크롤링 실패, 폴백 데이터 사용');
+            // 크롤링 실패시 폴백 데이터 사용
+            articles = CRAWLING_CONFIG.FALLBACK_DATA?.ARTICLES || [];
+            if (articles.length === 0) {
+                articlesGrid.innerHTML = '<div class="no-data">뉴스 데이터를 불러올 수 없습니다. 잠시 후 다시 시도해주세요.</div>';
+                return;
+            }
         }
+        
+        console.log(`${articles.length}개의 기사 데이터 로드 완료`);
         displayArticles(articles);
     } catch (error) {
         console.error('기사 데이터 로드 실패:', error);
-        articlesGrid.innerHTML = '<div class="no-data">실제 뉴스 데이터를 불러올 수 없습니다. 잠시 후 다시 시도해주세요.</div>';
+        
+        // 에러 발생시 폴백 데이터 사용
+        articles = CRAWLING_CONFIG.FALLBACK_DATA?.ARTICLES || [];
+        if (articles.length > 0) {
+            console.log('폴백 데이터로 기사 표시');
+            displayArticles(articles);
+        } else {
+            articlesGrid.innerHTML = '<div class="no-data">뉴스 데이터를 불러올 수 없습니다. 잠시 후 다시 시도해주세요.</div>';
+        }
     } finally {
         articlesLoading.style.display = 'none';
     }
@@ -599,49 +644,61 @@ async function crawlRealArticles() {
     // 실제 웹사이트 크롤링만 시도
     for (let i = 0; i < CRAWLING_CONFIG.NEWS_SITES.length; i++) {
         const site = CRAWLING_CONFIG.NEWS_SITES[i];
-        const proxyUrl = CRAWLING_CONFIG.PROXY_URLS[i % CRAWLING_CONFIG.PROXY_URLS.length];
         
-        try {
-            console.log(`뉴스 웹 크롤링 시도: ${site}`);
+        // 여러 프록시 서비스를 순차적으로 시도
+        let success = false;
+        for (let j = 0; j < CRAWLING_CONFIG.PROXY_URLS.length; j++) {
+            const proxyUrl = CRAWLING_CONFIG.PROXY_URLS[j];
             
-            // User-Agent 랜덤 선택
-            const userAgent = CRAWLING_CONFIG.USER_AGENTS ? 
-                CRAWLING_CONFIG.USER_AGENTS[Math.floor(Math.random() * CRAWLING_CONFIG.USER_AGENTS.length)] :
-                'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
-            
-            const response = await fetch(proxyUrl + encodeURIComponent(site), {
-                method: 'GET',
-                headers: {
-                    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-                    'Accept-Language': 'en-US,en;q=0.5',
-                    'Accept-Encoding': 'gzip, deflate',
-                    'Connection': 'keep-alive',
-                    'User-Agent': userAgent,
-                    'Cache-Control': 'no-cache',
-                    'Pragma': 'no-cache'
+            try {
+                console.log(`뉴스 웹 크롤링 시도: ${site} (프록시 ${j + 1}/${CRAWLING_CONFIG.PROXY_URLS.length})`);
+                
+                // User-Agent 랜덤 선택
+                const userAgent = CRAWLING_CONFIG.USER_AGENTS ? 
+                    CRAWLING_CONFIG.USER_AGENTS[Math.floor(Math.random() * CRAWLING_CONFIG.USER_AGENTS.length)] :
+                    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
+                
+                const response = await fetch(proxyUrl + encodeURIComponent(site), {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                        'Accept-Language': 'en-US,en;q=0.5',
+                        'Accept-Encoding': 'gzip, deflate',
+                        'Connection': 'keep-alive',
+                        'User-Agent': userAgent,
+                        'Cache-Control': 'no-cache',
+                        'Pragma': 'no-cache'
+                    }
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
                 }
-            });
-            
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
+                
+                const html = await response.text();
+                console.log(`뉴스 크롤링 성공: ${site}, HTML 길이: ${html.length}`);
+                
+                const siteArticles = parseArticlesFromHTML(html, site);
+                allArticles.push(...siteArticles);
+                
+                success = true;
+                break; // 성공하면 다음 프록시로 넘어가지 않음
+                
+            } catch (error) {
+                console.error(`프록시 ${j + 1} 뉴스 크롤링 실패: ${site}`, error);
+                continue; // 다음 프록시로 시도
             }
-            
-            const html = await response.text();
-            console.log(`뉴스 크롤링 성공: ${site}, HTML 길이: ${html.length}`);
-            
-            const siteArticles = parseArticlesFromHTML(html, site);
-            allArticles.push(...siteArticles);
-            
-            if (allArticles.length >= (CRAWLING_CONFIG.CRAWLING_SETTINGS?.MAX_NEWS_PER_SITE * 5 || 15)) break;
-            
-            // 요청 간 지연시간
-            if (CRAWLING_CONFIG.CRAWLING_SETTINGS?.DELAY_BETWEEN_REQUESTS) {
-                await new Promise(resolve => setTimeout(resolve, CRAWLING_CONFIG.CRAWLING_SETTINGS.DELAY_BETWEEN_REQUESTS));
-            }
-            
-        } catch (error) {
-            console.error(`뉴스 크롤링 실패: ${site}`, error);
-            continue; // 다음 사이트로 계속
+        }
+        
+        if (!success) {
+            console.error(`모든 프록시 실패: ${site}`);
+        }
+        
+        if (allArticles.length >= (CRAWLING_CONFIG.CRAWLING_SETTINGS?.MAX_NEWS_PER_SITE * 5 || 15)) break;
+        
+        // 요청 간 지연시간
+        if (CRAWLING_CONFIG.CRAWLING_SETTINGS?.DELAY_BETWEEN_REQUESTS) {
+            await new Promise(resolve => setTimeout(resolve, CRAWLING_CONFIG.CRAWLING_SETTINGS.DELAY_BETWEEN_REQUESTS));
         }
     }
     
