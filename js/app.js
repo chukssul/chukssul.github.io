@@ -4,32 +4,11 @@ let matches = [];
 let articles = [];
 let comments = {};
 
-// 크롤링 설정 - 실제 작동하는 사이트들
-const CRAWLING_CONFIG = {
-    // 더 안정적인 프록시 서버들
-    PROXY_URLS: [
-        'https://api.allorigins.win/raw?url=',
-        'https://cors-anywhere.herokuapp.com/',
-        'https://thingproxy.freeboard.io/fetch/'
-    ],
-    
-    // 실제 작동하는 축구 사이트들
-    FOOTBALL_SITES: [
-        'https://www.transfermarkt.com/wettbewerbe/national',
-        'https://www.soccerway.com/matches/',
-        'https://www.flashscore.com/football/',
-        'https://www.livescore.com/football/',
-        'https://www.whoscored.com/Regions/252/Tournaments/2/England-Premier-League'
-    ],
-    
-    // 실제 작동하는 뉴스 사이트들
-    NEWS_SITES: [
-        'https://www.goal.com/en/news',
-        'https://www.football365.com/',
-        'https://www.90min.com/',
-        'https://www.espn.com/soccer/',
-        'https://www.bbc.com/sport/football'
-    ]
+// 크롤링 설정 - config.js에서 가져오기
+const CRAWLING_CONFIG = window.CONFIG || {
+    PROXY_URLS: ['https://api.allorigins.win/raw?url='],
+    FOOTBALL_SITES: ['https://www.livescore.com/football/'],
+    NEWS_SITES: ['https://www.bbc.com/sport/football']
 };
 
 // DOM 요소들
@@ -124,8 +103,9 @@ async function loadMatches() {
 
     try {
         // 실제 크롤링 시도 (타임아웃 설정)
+        const timeout = CRAWLING_CONFIG.CRAWLING_SETTINGS?.TIMEOUT || 20000;
         const timeoutPromise = new Promise((_, reject) => 
-            setTimeout(() => reject(new Error('크롤링 타임아웃')), 8000)
+            setTimeout(() => reject(new Error('크롤링 타임아웃')), timeout)
         );
         
         const crawlingPromise = crawlRealMatches();
@@ -133,8 +113,9 @@ async function loadMatches() {
         matches = await Promise.race([crawlingPromise, timeoutPromise]);
         
         if (matches.length === 0) {
-            // 크롤링 실패시 시뮬레이션 데이터 사용
-            matches = generateMockMatches();
+            // 크롤링 실패시 빈 화면 표시
+            matchesGrid.innerHTML = '<div class="no-data">실제 경기 데이터를 불러올 수 없습니다. 잠시 후 다시 시도해주세요.</div>';
+            return;
         }
         
         // 시간 기준으로 정렬
@@ -142,8 +123,7 @@ async function loadMatches() {
         displayMatches(matches);
     } catch (error) {
         console.error('경기 데이터 로드 실패:', error);
-        matches = generateMockMatches();
-        displayMatches(matches);
+        matchesGrid.innerHTML = '<div class="no-data">실제 경기 데이터를 불러올 수 없습니다. 잠시 후 다시 시도해주세요.</div>';
     } finally {
         matchesLoading.style.display = 'none';
     }
@@ -161,6 +141,11 @@ async function crawlRealMatches() {
         try {
             console.log(`웹 크롤링 시도: ${site}`);
             
+            // User-Agent 랜덤 선택
+            const userAgent = CRAWLING_CONFIG.USER_AGENTS ? 
+                CRAWLING_CONFIG.USER_AGENTS[Math.floor(Math.random() * CRAWLING_CONFIG.USER_AGENTS.length)] :
+                'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
+            
             const response = await fetch(proxyUrl + encodeURIComponent(site), {
                 method: 'GET',
                 headers: {
@@ -168,7 +153,9 @@ async function crawlRealMatches() {
                     'Accept-Language': 'en-US,en;q=0.5',
                     'Accept-Encoding': 'gzip, deflate',
                     'Connection': 'keep-alive',
-                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+                    'User-Agent': userAgent,
+                    'Cache-Control': 'no-cache',
+                    'Pragma': 'no-cache'
                 }
             });
             
@@ -182,7 +169,12 @@ async function crawlRealMatches() {
             const siteMatches = parseMatchesFromHTML(html, site);
             allMatches.push(...siteMatches);
             
-            if (allMatches.length >= 15) break; // 충분한 데이터가 있으면 중단
+            if (allMatches.length >= (CRAWLING_CONFIG.CRAWLING_SETTINGS?.MAX_MATCHES_PER_LEAGUE || 20)) break;
+            
+            // 요청 간 지연시간
+            if (CRAWLING_CONFIG.CRAWLING_SETTINGS?.DELAY_BETWEEN_REQUESTS) {
+                await new Promise(resolve => setTimeout(resolve, CRAWLING_CONFIG.CRAWLING_SETTINGS.DELAY_BETWEEN_REQUESTS));
+            }
             
         } catch (error) {
             console.error(`사이트 크롤링 실패: ${site}`, error);
@@ -405,43 +397,83 @@ function parseGenericMatches(html) {
     // 다양한 패턴으로 경기 정보 추출
     const patterns = [
         /<div[^>]*class="[^"]*(match|fixture|game)[^"]*"[^>]*>([\s\S]*?)<\/div>/gi,
-        /<tr[^>]*class="[^"]*(match|fixture)[^"]*"[^>]*>([\s\S]*?)<\/tr>/gi
+        /<tr[^>]*class="[^"]*(match|fixture)[^"]*"[^>]*>([\s\S]*?)<\/tr>/gi,
+        /<li[^>]*class="[^"]*(match|fixture)[^"]*"[^>]*>([\s\S]*?)<\/li>/gi,
+        /<article[^>]*class="[^"]*(match|fixture)[^"]*"[^>]*>([\s\S]*?)<\/article>/gi
     ];
     
     patterns.forEach(pattern => {
         let match;
-        while ((match = pattern.exec(html)) !== null && matches.length < 5) {
+        while ((match = pattern.exec(html)) !== null && matches.length < 8) {
             const matchHtml = match[2] || match[1];
             
-            // 팀명 추출
+            // 팀명 추출 - 더 다양한 패턴
             const teamPatterns = [
                 /<span[^>]*class="[^"]*(home|away|team)[^"]*"[^>]*>([^<]+)<\/span>/gi,
-                /<td[^>]*class="[^"]*(home|away|team)[^"]*"[^>]*>([^<]+)<\/td>/gi
+                /<td[^>]*class="[^"]*(home|away|team)[^"]*"[^>]*>([^<]+)<\/td>/gi,
+                /<div[^>]*class="[^"]*(home|away|team)[^"]*"[^>]*>([^<]+)<\/div>/gi,
+                /<a[^>]*class="[^"]*(home|away|team)[^"]*"[^>]*>([^<]+)<\/a>/gi,
+                /<strong[^>]*>([^<]+)<\/strong>/gi,
+                /<b[^>]*>([^<]+)<\/b>/gi
             ];
             
             let homeTeam = null;
             let awayTeam = null;
+            const teams = [];
             
             teamPatterns.forEach(teamPattern => {
                 let teamMatch;
                 while ((teamMatch = teamPattern.exec(matchHtml)) !== null) {
-                    const teamName = teamMatch[2].trim();
-                    if (teamMatch[1].includes('home') && !homeTeam) {
-                        homeTeam = teamName;
-                    } else if (teamMatch[1].includes('away') && !awayTeam) {
-                        awayTeam = teamName;
+                    const teamName = teamMatch[2] || teamMatch[1];
+                    const cleanTeamName = teamName.trim().replace(/[^\w\s가-힣]/g, '');
+                    
+                    if (cleanTeamName.length > 2 && cleanTeamName.length < 30 && !teams.includes(cleanTeamName)) {
+                        teams.push(cleanTeamName);
                     }
                 }
             });
             
+            // VS 패턴으로 팀 분리
+            const vsPattern = /vs|VS|v\.|V\./;
+            const vsIndex = teams.findIndex(team => vsPattern.test(team));
+            
+            if (teams.length >= 2) {
+                if (vsIndex !== -1 && vsIndex > 0 && vsIndex < teams.length - 1) {
+                    homeTeam = teams[vsIndex - 1];
+                    awayTeam = teams[vsIndex + 1];
+                } else if (teams.length >= 2) {
+                    homeTeam = teams[0];
+                    awayTeam = teams[1];
+                }
+            }
+            
             if (homeTeam && awayTeam && homeTeam !== awayTeam) {
+                // 날짜 추출
+                const datePatterns = [
+                    /(\d{1,2}\/\d{1,2}\/\d{4})/,
+                    /(\d{4}-\d{2}-\d{2})/,
+                    /(\d{1,2}\.\d{1,2}\.\d{4})/,
+                    /(\d{1,2}\s+(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+\d{4})/i
+                ];
+                
+                let matchDate = new Date();
+                datePatterns.forEach(pattern => {
+                    const dateMatch = matchHtml.match(pattern);
+                    if (dateMatch) {
+                        const parsedDate = new Date(dateMatch[0]);
+                        if (!isNaN(parsedDate.getTime())) {
+                            matchDate = parsedDate;
+                        }
+                    }
+                });
+                
                 matches.push({
                     id: `match-${matches.length}`,
                     homeTeam: homeTeam,
                     awayTeam: awayTeam,
                     homeScore: 0,
                     awayScore: 0,
-                    date: new Date(),
+                    date: matchDate,
                     status: 'scheduled',
                     venue: '경기장',
                     referee: '주심',
@@ -451,57 +483,6 @@ function parseGenericMatches(html) {
         }
     });
     
-    return matches;
-}
-
-// 시뮬레이션 경기 데이터 생성 (크롤링 실패시 사용)
-function generateMockMatches() {
-    const leagues = ['K리그', '프리미어리그', '챔피언십', '라리가', '분데스리가', '세리에A', '리그앙', '에레디비지'];
-    const teams = [
-        '울산현대', '전북현대', 'FC서울', '수원삼성', '포항스틸러스', '인천유나이티드',
-        '맨체스터시티', '아스널', '맨체스터유나이티드', '리버풀', '첼시', '토트넘',
-        '레스터시티', '리즈유나이티드', '사우샘프턴', '번리', '미들즈브러', '왓포드',
-        '레알마드리드', '바르셀로나', '아틀레티코마드리드', '세비야', '바이에른뮌헨',
-        '도르트문트', '레버쿠젠', '인터밀란', 'AC밀란', '유벤투스', '나폴리'
-    ];
-
-    const matches = [];
-    const statuses = ['scheduled', 'live', 'finished'];
-    
-    for (let i = 0; i < 25; i++) {
-        const team1 = teams[Math.floor(Math.random() * teams.length)];
-        const team2 = teams[Math.floor(Math.random() * teams.length)];
-        const league = leagues[Math.floor(Math.random() * leagues.length)];
-        
-        if (team1 !== team2) {
-            const status = statuses[Math.floor(Math.random() * statuses.length)];
-            const date = new Date();
-            date.setDate(date.getDate() + Math.floor(Math.random() * 30) - 15);
-            
-            let score1 = 0, score2 = 0;
-            if (status === 'finished') {
-                score1 = Math.floor(Math.random() * 5);
-                score2 = Math.floor(Math.random() * 5);
-            } else if (status === 'live') {
-                score1 = Math.floor(Math.random() * 3);
-                score2 = Math.floor(Math.random() * 3);
-            }
-
-            matches.push({
-                id: `match-${i}`,
-                homeTeam: team1,
-                awayTeam: team2,
-                homeScore: score1,
-                awayScore: score2,
-                date: date,
-                status: status,
-                venue: `${team1} 홈구장`,
-                referee: '주심',
-                leagueName: league
-            });
-        }
-    }
-
     return matches;
 }
 
@@ -588,8 +569,9 @@ async function loadArticles() {
 
     try {
         // 실제 크롤링 시도 (타임아웃 설정)
+        const timeout = CRAWLING_CONFIG.CRAWLING_SETTINGS?.TIMEOUT || 20000;
         const timeoutPromise = new Promise((_, reject) => 
-            setTimeout(() => reject(new Error('크롤링 타임아웃')), 8000)
+            setTimeout(() => reject(new Error('크롤링 타임아웃')), timeout)
         );
         
         const crawlingPromise = crawlRealArticles();
@@ -597,14 +579,14 @@ async function loadArticles() {
         articles = await Promise.race([crawlingPromise, timeoutPromise]);
         
         if (articles.length === 0) {
-            // 크롤링 실패시 시뮬레이션 데이터 사용
-            articles = generateMockArticles();
+            // 크롤링 실패시 빈 화면 표시
+            articlesGrid.innerHTML = '<div class="no-data">실제 뉴스 데이터를 불러올 수 없습니다. 잠시 후 다시 시도해주세요.</div>';
+            return;
         }
         displayArticles(articles);
     } catch (error) {
         console.error('기사 데이터 로드 실패:', error);
-        articles = generateMockArticles();
-        displayArticles(articles);
+        articlesGrid.innerHTML = '<div class="no-data">실제 뉴스 데이터를 불러올 수 없습니다. 잠시 후 다시 시도해주세요.</div>';
     } finally {
         articlesLoading.style.display = 'none';
     }
@@ -622,6 +604,11 @@ async function crawlRealArticles() {
         try {
             console.log(`뉴스 웹 크롤링 시도: ${site}`);
             
+            // User-Agent 랜덤 선택
+            const userAgent = CRAWLING_CONFIG.USER_AGENTS ? 
+                CRAWLING_CONFIG.USER_AGENTS[Math.floor(Math.random() * CRAWLING_CONFIG.USER_AGENTS.length)] :
+                'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
+            
             const response = await fetch(proxyUrl + encodeURIComponent(site), {
                 method: 'GET',
                 headers: {
@@ -629,7 +616,9 @@ async function crawlRealArticles() {
                     'Accept-Language': 'en-US,en;q=0.5',
                     'Accept-Encoding': 'gzip, deflate',
                     'Connection': 'keep-alive',
-                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+                    'User-Agent': userAgent,
+                    'Cache-Control': 'no-cache',
+                    'Pragma': 'no-cache'
                 }
             });
             
@@ -643,7 +632,12 @@ async function crawlRealArticles() {
             const siteArticles = parseArticlesFromHTML(html, site);
             allArticles.push(...siteArticles);
             
-            if (allArticles.length >= 12) break; // 충분한 데이터가 있으면 중단
+            if (allArticles.length >= (CRAWLING_CONFIG.CRAWLING_SETTINGS?.MAX_NEWS_PER_SITE * 5 || 15)) break;
+            
+            // 요청 간 지연시간
+            if (CRAWLING_CONFIG.CRAWLING_SETTINGS?.DELAY_BETWEEN_REQUESTS) {
+                await new Promise(resolve => setTimeout(resolve, CRAWLING_CONFIG.CRAWLING_SETTINGS.DELAY_BETWEEN_REQUESTS));
+            }
             
         } catch (error) {
             console.error(`뉴스 크롤링 실패: ${site}`, error);
@@ -654,8 +648,6 @@ async function crawlRealArticles() {
     console.log(`총 ${allArticles.length}개의 기사 데이터 수집 완료`);
     return allArticles.sort((a, b) => b.publishedAt - a.publishedAt);
 }
-
-
 
 // HTML에서 기사 정보 파싱 (실제 작동하는 버전)
 function parseArticlesFromHTML(html, site) {
@@ -925,32 +917,74 @@ function parseGenericArticles(html) {
     
     const patterns = [
         /<article[^>]*>([\s\S]*?)<\/article>/gi,
-        /<div[^>]*class="[^"]*(article|news|post)[^"]*"[^>]*>([\s\S]*?)<\/div>/gi
+        /<div[^>]*class="[^"]*(article|news|post)[^"]*"[^>]*>([\s\S]*?)<\/div>/gi,
+        /<div[^>]*class="[^"]*(story|headline)[^"]*"[^>]*>([\s\S]*?)<\/div>/gi,
+        /<li[^>]*class="[^"]*(article|news)[^"]*"[^>]*>([\s\S]*?)<\/li>/gi
     ];
     
     patterns.forEach(pattern => {
         let article;
-        while ((article = pattern.exec(html)) !== null && articles.length < 4) {
+        while ((article = pattern.exec(html)) !== null && articles.length < 6) {
             const articleHtml = article[1] || article[2];
             
-            // 제목 추출
-            const titlePattern = /<h[1-6][^>]*>([^<]+)<\/h[1-6]>/i;
-            const titleMatch = articleHtml.match(titlePattern);
+            // 제목 추출 - 더 다양한 패턴
+            const titlePatterns = [
+                /<h[1-6][^>]*>([^<]+)<\/h[1-6]>/i,
+                /<a[^>]*class="[^"]*(title|headline)[^"]*"[^>]*>([^<]+)<\/a>/i,
+                /<span[^>]*class="[^"]*(title|headline)[^"]*"[^>]*>([^<]+)<\/span>/i,
+                /<strong[^>]*>([^<]+)<\/strong>/i,
+                /<b[^>]*>([^<]+)<\/b>/i
+            ];
             
-            if (titleMatch && titleMatch[1].trim().length > 10) {
-                const title = titleMatch[1].trim();
+            let title = null;
+            titlePatterns.forEach(titlePattern => {
+                const titleMatch = articleHtml.match(titlePattern);
+                if (titleMatch && (titleMatch[1] || titleMatch[2]).trim().length > 10) {
+                    title = (titleMatch[1] || titleMatch[2]).trim();
+                }
+            });
+            
+            if (title) {
+                // 설명 추출 - 더 다양한 패턴
+                const descPatterns = [
+                    /<p[^>]*>([^<]+)<\/p>/i,
+                    /<div[^>]*class="[^"]*(summary|excerpt)[^"]*"[^>]*>([^<]+)<\/div>/i,
+                    /<span[^>]*class="[^"]*(summary|excerpt)[^"]*"[^>]*>([^<]+)<\/span>/i
+                ];
                 
-                // 설명 추출
-                const descPattern = /<p[^>]*>([^<]+)<\/p>/i;
-                const descMatch = articleHtml.match(descPattern);
-                const description = descMatch ? descMatch[1].trim() : title;
+                let description = title;
+                descPatterns.forEach(descPattern => {
+                    const descMatch = articleHtml.match(descPattern);
+                    if (descMatch && (descMatch[1] || descMatch[2]).trim().length > 20) {
+                        description = (descMatch[1] || descMatch[2]).trim();
+                    }
+                });
+                
+                // 날짜 추출
+                const datePatterns = [
+                    /(\d{1,2}\/\d{1,2}\/\d{4})/,
+                    /(\d{4}-\d{2}-\d{2})/,
+                    /(\d{1,2}\.\d{1,2}\.\d{4})/,
+                    /(\d{1,2}\s+(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+\d{4})/i
+                ];
+                
+                let publishedAt = new Date();
+                datePatterns.forEach(pattern => {
+                    const dateMatch = articleHtml.match(pattern);
+                    if (dateMatch) {
+                        const parsedDate = new Date(dateMatch[0]);
+                        if (!isNaN(parsedDate.getTime())) {
+                            publishedAt = parsedDate;
+                        }
+                    }
+                });
                 
                 articles.push({
                     id: `article-${articles.length}`,
                     title: title,
                     description: description,
                     source: '축구 뉴스',
-                    publishedAt: new Date(),
+                    publishedAt: publishedAt,
                     url: '#',
                     content: description
                 });
@@ -959,68 +993,6 @@ function parseGenericArticles(html) {
     });
     
     return articles;
-}
-
-// 시뮬레이션 기사 데이터 생성 (크롤링 실패시 사용)
-function generateMockArticles() {
-    const mockArticles = [
-        {
-            id: 'article-1',
-            title: "손흥민, 프리미어리그 득점왕 경쟁에서 선두",
-            description: "토트넘의 손흥민이 이번 시즌 프리미어리그 득점왕 경쟁에서 선두를 달리고 있다. 지난 경기에서도 멀티골을 기록하며 팀의 승리를 이끌었다.",
-            source: "ESPN",
-            publishedAt: new Date(Date.now() - Math.random() * 86400000 * 7),
-            url: "#",
-            content: "토트넘의 손흥민이 이번 시즌 프리미어리그 득점왕 경쟁에서 선두를 달리고 있다. 지난 경기에서도 멀티골을 기록하며 팀의 승리를 이끌었다. 손흥민은 현재 15골을 기록하며 득점왕 경쟁에서 1위를 달리고 있으며, 팀의 핵심 공격수로서 맹활약을 펼치고 있다."
-        },
-        {
-            id: 'article-2',
-            title: "K리그 1, 2024 시즌 개막전 성황리에 마무리",
-            description: "2024 K리그 1 시즌이 성황리에 개막했다. 개막전에서 울산현대와 전북현대의 대결이 가장 큰 관심을 받았다.",
-            source: "스포츠조선",
-            publishedAt: new Date(Date.now() - Math.random() * 86400000 * 7),
-            url: "#",
-            content: "2024 K리그 1 시즌이 성황리에 개막했다. 개막전에서 울산현대와 전북현대의 대결이 가장 큰 관심을 받았다. 두 팀은 치열한 경기를 펼쳤으며, 결국 2-2 무승부로 마무리되었다. 팬들은 올 시즌도 흥미진진할 것으로 기대하고 있다."
-        },
-        {
-            id: 'article-3',
-            title: "맨체스터시티, 챔피언스리그 4강 진출 확정",
-            description: "맨체스터시티가 챔피언스리그 8강에서 승리하며 4강 진출을 확정지었다. 하알란드의 해트트릭이 승리의 주역이었다.",
-            source: "BBC Sport",
-            publishedAt: new Date(Date.now() - Math.random() * 86400000 * 7),
-            url: "#",
-            content: "맨체스터시티가 챔피언스리그 8강에서 승리하며 4강 진출을 확정지었다. 하알란드의 해트트릭이 승리의 주역이었다. 시티는 홈에서 3-0 승리를 거두며 압도적인 경기력을 보여주었고, 이제 4강에서 더욱 치열한 경쟁을 펼칠 예정이다."
-        },
-        {
-            id: 'article-4',
-            title: "김민재, 바이에른 뮌헨에서 안정적인 활약",
-            description: "바이에른 뮌헨의 김민재가 부상 복귀 후 안정적인 활약을 보이고 있다. 팀의 수비 안정성에 큰 기여를 하고 있다.",
-            source: "Kicker",
-            publishedAt: new Date(Date.now() - Math.random() * 86400000 * 7),
-            url: "#",
-            content: "바이에른 뮌헨의 김민재가 부상 복귀 후 안정적인 활약을 보이고 있다. 팀의 수비 안정성에 큰 기여를 하고 있다. 김민재는 최근 경기에서 뛰어난 수비력을 보여주며 팀의 승리에 기여하고 있으며, 팬들과 전문가들로부터 높은 평가를 받고 있다."
-        },
-        {
-            id: 'article-5',
-            title: "챔피언십 리그, 승격 플레이오프 경쟁 치열",
-            description: "영국 챔피언십 리그에서 승격 플레이오프 진출을 위한 경쟁이 치열하다. 상위권 팀들 간의 점수 차이가 미세하다.",
-            source: "Sky Sports",
-            publishedAt: new Date(Date.now() - Math.random() * 86400000 * 7),
-            url: "#",
-            content: "영국 챔피언십 리그에서 승격 플레이오프 진출을 위한 경쟁이 치열하다. 상위권 팀들 간의 점수 차이가 미세하다. 레스터시티, 리즈유나이티드, 사우샘프턴 등이 치열한 경쟁을 펼치고 있으며, 시즌 마지막까지 승격 경쟁이 이어질 것으로 예상된다."
-        },
-        {
-            id: 'article-6',
-            title: "이강인, PSG에서 주전 경쟁 치열",
-            description: "파리 생제르맹의 이강인이 팀 내 주전 경쟁에서 좋은 모습을 보이고 있다. 최근 경기에서도 좋은 활약을 펼쳤다.",
-            source: "L'Equipe",
-            publishedAt: new Date(Date.now() - Math.random() * 86400000 * 7),
-            url: "#",
-            content: "파리 생제르맹의 이강인이 팀 내 주전 경쟁에서 좋은 모습을 보이고 있다. 최근 경기에서도 좋은 활약을 펼쳤다. 이강인은 기술적인 플레이와 창의적인 패스로 팀의 공격에 활기를 불어넣고 있으며, 감독과 팀 동료들로부터 신뢰를 받고 있다."
-        }
-    ];
-
-    return mockArticles.sort((a, b) => b.publishedAt - a.publishedAt);
 }
 
 // 기사 표시
