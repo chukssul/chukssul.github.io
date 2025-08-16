@@ -4,7 +4,6 @@ let matches = [];
 let articles = [];
 let koreanNews = [];
 let internationalNews = [];
-let comments = {};
 
 // 실제 크롤링을 위한 설정
 const CRAWLING_CONFIG = {
@@ -74,12 +73,7 @@ const articleModalBody = document.getElementById('article-modal-body');
 const newsModal = document.getElementById('news-modal');
 const newsModalBody = document.getElementById('news-modal-body');
 const closeModal = document.querySelectorAll('.close');
-const commentText = document.getElementById('comment-text');
-const submitComment = document.getElementById('submit-comment');
-const commentsList = document.getElementById('comments-list');
-const newsCommentText = document.getElementById('news-comment-text');
-const submitNewsComment = document.getElementById('submit-news-comment');
-const newsCommentsList = document.getElementById('news-comments-list');
+// 채팅 관련 요소들은 chat.js에서 처리
 
 // 한국 축구 뉴스 관련 요소들
 const newsSearch = document.getElementById('news-search');
@@ -101,7 +95,7 @@ function initializeApp() {
     loadInternationalNews();
     // loadMatches(); // 향후 개발 예정
     // loadArticles(); // 향후 개발 예정
-    loadComments();
+    // 채팅 시스템은 chat.js에서 처리
 }
 
 // 이벤트 리스너 설정
@@ -164,6 +158,8 @@ function setupEventListeners() {
             document.querySelectorAll('.modal').forEach(modal => {
                 modal.style.display = 'none';
             });
+            // 채팅 종료
+            stopChat();
         });
     });
 
@@ -172,18 +168,13 @@ function setupEventListeners() {
         document.querySelectorAll('.modal').forEach(modal => {
             if (e.target === modal) {
                 modal.style.display = 'none';
+                // 채팅 종료
+                stopChat();
             }
         });
     });
 
-    // 댓글 작성
-    if (submitComment) {
-        submitComment.addEventListener('click', addComment);
-    }
-    
-    if (submitNewsComment) {
-        submitNewsComment.addEventListener('click', addNewsComment);
-    }
+    // 채팅 시스템은 chat.js에서 처리
 }
 
 // 탭 전환
@@ -430,74 +421,14 @@ function openNewsModal(newsId) {
     document.getElementById('modal-news-summary').textContent = news.summary;
     document.getElementById('modal-news-link').href = news.link;
     
-    // 댓글 로드
-    loadNewsComments(newsId);
+    // 채팅 시작
+    startNewsChat(newsId);
     
     // 모달 표시
     newsModal.style.display = 'block';
 }
 
-// 뉴스 댓글 로드
-function loadNewsComments(newsId) {
-    const newsComments = comments[`news-${newsId}`] || [];
-    displayNewsComments(newsComments);
-}
-
-// 뉴스 댓글 표시
-function displayNewsComments(newsComments) {
-    if (!newsCommentsList) return;
-    
-    if (newsComments.length === 0) {
-        newsCommentsList.innerHTML = '<p class="no-comments">아직 댓글이 없습니다.</p>';
-        return;
-    }
-    
-    newsCommentsList.innerHTML = newsComments.map(comment => `
-        <div class="comment">
-            <div class="comment-header">
-                <span class="comment-author">${comment.author}</span>
-                <span class="comment-date">${formatDate(comment.date)}</span>
-            </div>
-            <div class="comment-content">${comment.content}</div>
-        </div>
-    `).join('');
-}
-
-// 뉴스 댓글 추가
-function addNewsComment() {
-    const content = newsCommentText.value.trim();
-    if (!content) return;
-    
-    const newsId = getCurrentNewsId();
-    if (!newsId) return;
-    
-    const comment = {
-        id: `comment-${Date.now()}`,
-        content: content,
-        author: '익명 사용자',
-        date: new Date()
-    };
-    
-    if (!comments[`news-${newsId}`]) {
-        comments[`news-${newsId}`] = [];
-    }
-    comments[`news-${newsId}`].push(comment);
-    
-    // 로컬 스토리지에 저장
-    localStorage.setItem('comments', JSON.stringify(comments));
-    
-    // 댓글 표시 업데이트
-    displayNewsComments(comments[`news-${newsId}`]);
-    
-    // 입력 필드 초기화
-    newsCommentText.value = '';
-}
-
-// 현재 뉴스 ID 가져오기
-function getCurrentNewsId() {
-    const title = document.getElementById('modal-news-title').textContent;
-    return koreanNews.find(news => news.title === title)?.id;
-}
+// 채팅 시스템은 chat.js에서 처리
 
 // 뉴스 모달 열기
 function openInternationalNewsModal(newsId) {
@@ -511,8 +442,8 @@ function openInternationalNewsModal(newsId) {
     document.getElementById('modal-news-summary').textContent = news.summary;
     document.getElementById('modal-news-link').href = news.link;
     
-    // 댓글 로드
-    loadNewsComments(newsId);
+    // 채팅 시작
+    startNewsChat(newsId);
     
     // 모달 표시
     newsModal.style.display = 'block';
@@ -835,63 +766,7 @@ function fallbackTranslate(text) {
     return translatedText;
 }
 
-// 댓글 로드
-function loadComments() {
-    const savedComments = localStorage.getItem('comments');
-    if (savedComments) {
-        comments = JSON.parse(savedComments);
-    }
-}
-
-// 댓글 추가
-function addComment() {
-    const content = commentText.value.trim();
-    if (!content) return;
-    
-    const articleId = getCurrentArticleId();
-    if (!articleId) return;
-    
-    const comment = {
-        id: `comment-${Date.now()}`,
-        content: content,
-        author: '익명 사용자',
-        date: new Date()
-    };
-    
-    if (!comments[articleId]) {
-        comments[articleId] = [];
-    }
-    comments[articleId].push(comment);
-    
-    // 로컬 스토리지에 저장
-    localStorage.setItem('comments', JSON.stringify(comments));
-    
-    // 댓글 표시 업데이트
-    displayComments(comments[articleId]);
-    
-    // 입력 필드 초기화
-    commentText.value = '';
-}
-
-// 댓글 표시
-function displayComments(articleComments) {
-    if (!commentsList) return;
-    
-    if (!articleComments || articleComments.length === 0) {
-        commentsList.innerHTML = '<p class="no-comments">아직 댓글이 없습니다.</p>';
-        return;
-    }
-    
-    commentsList.innerHTML = articleComments.map(comment => `
-        <div class="comment">
-            <div class="comment-header">
-                <span class="comment-author">${comment.author}</span>
-                <span class="comment-date">${formatDate(comment.date)}</span>
-            </div>
-            <div class="comment-content">${comment.content}</div>
-        </div>
-    `).join('');
-}
+// 채팅 시스템은 chat.js에서 처리
 
 // 모달 열기 함수들
 function openMatchModal(matchId) {
@@ -938,9 +813,8 @@ function openArticleModal(articleId, updatedArticle = null) {
         `;
     }
 
-    // 댓글 로드
-    const articleComments = comments[articleId] || [];
-    displayComments(articleComments);
+    // 채팅 시작
+    startArticleChat(articleId);
     
     articleModalBody.innerHTML = articleContent;
     articleModal.style.display = 'block';

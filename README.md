@@ -1,167 +1,104 @@
-# 한국 축구 뉴스 & 경기 일정 📰⚽
+# 축썰 - 축구 뉴스 실시간 채팅 플랫폼
 
-한국의 모든 축구 뉴스를 완전 무료로 수집하고 표시하는 웹 애플리케이션입니다.
+국내 축구, 해외 축구 속보를 간편하게 확인하고 실시간으로 의견을 나눌 수 있는 웹 애플리케이션입니다.
 
-## 🌟 주요 기능
+## ✨ 주요 기능
 
-### 🇰🇷 한국 축구 뉴스 수집
-- **RSS 피드 기반 수집**: 네이버 스포츠, 다음 스포츠, 조선일보, 중앙일보, 한겨레 등 주요 언론사
-- **안전한 크롤링**: RSS가 없는 사이트는 공개 데이터만 수집
-- **실시간 업데이트**: 최신 뉴스 자동 수집
-- **검색 및 필터링**: 키워드 검색, 소스별 필터링
-- **저작권 안전**: 원문 링크만 제공, 전문 저장 금지
+### 📰 축구 뉴스
+- **국내 축구 속보**: 한국 축구 관련 최신 뉴스
+- **해외 축구 속보**: 해외 축구 관련 최신 뉴스
+- **실시간 업데이트**: 최신 뉴스 자동 새로고침
+- **검색 기능**: 키워드로 뉴스 검색
 
-### 📊 뉴스 통계
-- 총 뉴스 수
-- 마지막 업데이트 시간
-- RSS 소스별 수집 현황
+### 💬 실시간 채팅
+- **Firebase 기반**: 실시간으로 다른 사용자와 소통
+- **뉴스별 채팅**: 각 뉴스마다 독립적인 채팅방
+- **익명 사용자**: 별도 가입 없이 바로 사용
+- **실시간 업데이트**: 새 메시지 즉시 표시
 
-### ⚽ 경기 일정
-- 실시간 경기 정보
-- 예정/최근 경기 필터링
-- 상세 경기 정보 모달
-
-### 💬 댓글 시스템
-- 뉴스별 댓글 작성
-- 로컬 스토리지 저장
-- 실시간 댓글 표시
-
-## 🛠️ 기술 스택
+## 🚀 기술 스택
 
 - **Frontend**: HTML5, CSS3, JavaScript (ES6+)
-- **뉴스 수집**: RSS 피드, CORS 프록시
-- **데이터 처리**: XML 파싱, HTML 파싱
-- **스토리지**: LocalStorage (댓글)
-- **UI/UX**: 반응형 디자인, 모던 인터페이스
+- **Backend**: Firebase Realtime Database
+- **배포**: GitHub Pages
+- **폰트**: Noto Sans KR, Font Awesome
 
-## 📡 수집 대상 사이트
+## 🔧 설치 및 설정
 
-### RSS 피드 (80%)
-- 네이버 스포츠 축구
-- 다음 스포츠 축구
-- 조선일보 스포츠
-- 중앙일보 스포츠
-- 한겨레 스포츠
-- 경향신문 스포츠
-- 인터풋볼
-- 풋볼리스트
-- 베스트일레븐
-- K리그 공식
+### 1. Firebase 프로젝트 설정
 
-### 크롤링 (20%)
-- RSS가 없는 사이트
-- 공개 데이터만 수집
-- robots.txt 준수
+1. [Firebase Console](https://console.firebase.google.com/)에서 새 프로젝트 생성
+2. Realtime Database 활성화
+3. 보안 규칙 설정 (테스트 모드로 시작)
 
-## 🚀 설치 및 실행
+### 2. Firebase 설정 파일 수정
 
-1. **저장소 클론**
-```bash
-git clone https://github.com/your-username/korean-football-news.git
-cd korean-football-news
-```
-
-2. **웹 서버 실행**
-```bash
-# Python 3
-python -m http.server 8000
-
-# Node.js
-npx serve .
-
-# PHP
-php -S localhost:8000
-```
-
-3. **브라우저에서 접속**
-```
-http://localhost:8000
-```
-
-## 📁 프로젝트 구조
-
-```
-chukssul/
-├── index.html              # 메인 HTML 파일
-├── css/
-│   └── styles.css          # 스타일시트
-├── js/
-│   ├── app.js              # 메인 애플리케이션
-│   ├── korean-football-news.js  # 한국 축구 뉴스 수집기
-│   ├── real-crawler.js     # 경기 데이터 크롤러
-│   └── translator.js       # 번역 기능
-├── images/                 # 이미지 파일
-├── docs/                   # 문서
-└── README.md              # 프로젝트 설명
-```
-
-## 🔧 설정
-
-### RSS 피드 추가
-`js/korean-football-news.js` 파일에서 RSS_FEEDS 배열에 새로운 피드를 추가할 수 있습니다:
+`firebase-config.js` 파일에서 Firebase 프로젝트 설정값을 입력하세요:
 
 ```javascript
-RSS_FEEDS: [
-    'https://your-site.com/rss/축구.xml',
-    // 추가 RSS 피드...
-]
+const firebaseConfig = {
+  apiKey: "YOUR_API_KEY",
+  authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+  databaseURL: "https://YOUR_PROJECT_ID-default-rtdb.firebaseio.com",
+  projectId: "YOUR_PROJECT_ID",
+  storageBucket: "YOUR_PROJECT_ID.appspot.com",
+  messagingSenderId: "YOUR_SENDER_ID",
+  appId: "YOUR_APP_ID"
+};
 ```
 
-### 크롤링 사이트 추가
-CRAWL_SITES 배열에 새로운 사이트를 추가할 수 있습니다:
+### 3. 보안 규칙 설정
 
-```javascript
-CRAWL_SITES: [
-    {
-        name: '사이트명',
-        url: 'https://your-site.com/football',
-        selector: '.news-list li'
+Firebase Realtime Database 보안 규칙:
+
+```json
+{
+  "rules": {
+    "chats": {
+      "$chatId": {
+        "messages": {
+          ".read": true,
+          ".write": true
+        }
+      }
     }
-]
+  }
+}
 ```
 
-## 🛡️ 저작권 및 법적 고지
+## 📱 사용법
 
-- 이 애플리케이션은 RSS 피드와 공개 데이터만을 사용합니다
-- 뉴스 전문은 저장하지 않고 제목, 요약, 원문 링크만 제공합니다
-- 원문은 각 언론사 사이트에서 확인하실 수 있습니다
-- 모든 저작권은 해당 언론사에 있습니다
+### 뉴스 보기
+1. 상단 탭에서 "국내 축구 속보" 또는 "해외 축구 속보" 선택
+2. 뉴스 카드 클릭하여 상세 내용 확인
+3. "원문 보기" 버튼으로 원본 기사로 이동
 
-## 📈 성능 최적화
+### 실시간 채팅
+1. 뉴스 상세 모달에서 하단 채팅창 확인
+2. 메시지 입력 후 Enter 키 또는 전송 버튼 클릭
+3. 다른 사용자들과 실시간으로 의견 교환
 
-- **캐싱**: 수집된 뉴스는 메모리에 캐시
-- **중복 제거**: 동일한 뉴스 자동 필터링
-- **지연 로딩**: 필요시에만 데이터 로드
-- **프록시 로테이션**: CORS 우회를 위한 다중 프록시
+## 🌟 특징
 
-## 🔍 검색 기능
+- **반응형 디자인**: 모바일, 태블릿, 데스크톱 모든 기기 지원
+- **실시간 채팅**: Firebase로 즉시 메시지 전송 및 수신
+- **익명 사용**: 개인정보 수집 없이 바로 사용
+- **한국어 최적화**: 한국 사용자를 위한 UI/UX
 
-- **키워드 검색**: 제목, 내용, 소스에서 검색
-- **소스별 필터링**: 특정 언론사 뉴스만 표시
-- **실시간 검색**: 입력과 동시에 결과 표시
+## 🔒 보안 및 개인정보
 
-## 📱 반응형 디자인
+- 사용자 식별 정보를 수집하지 않습니다
+- 채팅 내용은 Firebase에 저장되지만 개인정보는 포함되지 않습니다
+- 모든 사용자는 익명으로 참여합니다
 
-- 모바일, 태블릿, 데스크톱 지원
-- 터치 친화적 인터페이스
-- 적응형 그리드 레이아웃
+## 📝 라이선스
+
+이 프로젝트는 MIT 라이선스 하에 배포됩니다.
 
 ## 🤝 기여하기
 
-1. Fork the Project
-2. Create your Feature Branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your Changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the Branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
-
-## 📄 라이선스
-
-이 프로젝트는 MIT 라이선스 하에 배포됩니다. 자세한 내용은 `LICENSE` 파일을 참조하세요.
-
-## 📞 문의
-
-프로젝트에 대한 문의사항이 있으시면 이슈를 생성해 주세요.
+버그 리포트, 기능 제안, 풀 리퀘스트를 환영합니다!
 
 ---
 
-**한국 축구 뉴스 & 경기 일정** - 완전 무료, 저작권 안전한 축구 뉴스 수집기 ⚽📰 
+**축썰** - 축구 뉴스와 함께하는 실시간 소통의 장 

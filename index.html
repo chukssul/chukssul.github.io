@@ -148,13 +148,17 @@
                         </a>
                     </div>
                 </div>
-                <div class="comments-section">
-                    <h3>댓글</h3>
-                    <div class="comment-form">
-                        <textarea id="news-comment-text" placeholder="댓글을 입력하세요..."></textarea>
-                        <button id="submit-news-comment">댓글 작성</button>
+                <div class="chat-section">
+                    <h3>실시간 채팅</h3>
+                    <div class="chat-container">
+                        <div class="chat-messages" id="chat-messages"></div>
+                        <div class="chat-input-container">
+                            <input type="text" id="chat-input" placeholder="메시지를 입력하세요..." maxlength="200">
+                            <button id="send-chat-message">
+                                <i class="fas fa-paper-plane"></i>
+                            </button>
+                        </div>
                     </div>
-                    <div class="comments-list" id="news-comments-list"></div>
                 </div>
             </div>
         </div>
@@ -174,13 +178,17 @@
             <span class="close">&times;</span>
             <div class="modal-body" id="article-modal-body">
                 <div class="article-content"></div>
-                <div class="comments-section">
-                    <h3>댓글</h3>
-                    <div class="comment-form">
-                        <textarea id="comment-text" placeholder="댓글을 입력하세요..."></textarea>
-                        <button id="submit-comment">댓글 작성</button>
+                <div class="chat-section">
+                    <h3>실시간 채팅</h3>
+                    <div class="chat-container">
+                        <div class="chat-messages" id="article-chat-messages"></div>
+                        <div class="chat-input-container">
+                            <input type="text" id="article-chat-input" placeholder="메시지를 입력하세요..." maxlength="200">
+                            <button id="send-article-chat-message">
+                                <i class="fas fa-paper-plane"></i>
+                            </button>
+                        </div>
                     </div>
-                    <div class="comments-list" id="comments-list"></div>
                 </div>
             </div>
         </div>
@@ -197,11 +205,17 @@
         </div>
     </footer>
 
+    <!-- Firebase SDK (v8 호환) -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    
     <script src="config.js"></script>
+    <script src="firebase-config.js"></script>
     <script src="js/korean-football-news.js"></script>
     <script src="js/international-football-news.js"></script>
     <script src="js/real-crawler.js"></script>
     <script src="js/translator.js"></script>
+    <script src="js/chat.js"></script>
     <script src="js/app.js"></script>
 </body>
 </html> 
