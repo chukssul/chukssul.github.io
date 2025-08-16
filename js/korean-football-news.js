@@ -154,14 +154,15 @@ class KoreanFootballNewsCollector {
                     console.log('네이버 뉴스 아이템:', {
                         title: item.title,
                         datetime: item.datetime,
-                        parsedDate: this.parseNaverDate(item.datetime)
+                        parsedDate: this.parseNaverDate(item.datetime),
+                        link: item.link
                     });
                     
                     return {
                         id: `crawl-${Date.now()}-${Math.random()}`,
                         title: item.title,
                         description: item.subContent || item.title,
-                        link: this.makeAbsoluteUrl(item.link, site.url),
+                        link: item.link, // 절대 URL이므로 그대로 사용
                         publishedAt: this.parseNaverDate(item.datetime),
                         source: site.name,
                         type: 'crawl',

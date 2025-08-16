@@ -262,7 +262,7 @@ body {
     -webkit-line-clamp: 3;
     -webkit-box-orient: vertical;
     overflow: hidden;
-    min-height: 4.8rem; /* 3줄 * 1.6 * 1rem = 4.8rem */
+    min-height: 6.4rem; /* 4줄 * 1.6 * 1rem = 6.4rem (4줄까지 고려) */
     box-sizing: border-box;
 }
 
