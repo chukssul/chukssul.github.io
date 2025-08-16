@@ -42,7 +42,7 @@ body {
 }
 
 .logo i {
-    color: #ffd700;
+    color: white;
 }
 
 .nav {
@@ -65,7 +65,7 @@ body {
 .nav-btn:hover,
 .nav-btn.active {
     background: rgba(255,255,255,0.1);
-    border-color: #ffd700;
+    border-color: white;
 }
 
 /* 메인 콘텐츠 */
