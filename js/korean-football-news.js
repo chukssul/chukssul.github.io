@@ -143,20 +143,33 @@ class KoreanFootballNewsCollector {
     // 크롤링으로 뉴스 수집
     async collectFromCrawling() {
         const allNews = [];
-        
         for (const site of this.config.CRAWL_SITES) {
             try {
                 console.log(`크롤링 중: ${site.name}`);
-                const news = await this.crawlSite(site);
+                const apiUrl = 'https://sports.news.naver.com/wfootball/news/list?isphoto=N&page=1&pageSize=20';
+                const response = await this.fetchWithProxy(apiUrl);
+                const json = await response.json();
+    
+                const news = json.list.map(item => ({
+                    id: `crawl-${Date.now()}-${Math.random()}`,
+                    title: item.title,
+                    description: item.subContent || item.title,
+                    link: this.makeAbsoluteUrl(item.link, site.url),
+                    publishedAt: new Date(item.datetime.replace(' ', 'T')),
+                    source: site.name,
+                    type: 'crawl',
+                    summary: this.generateSummary(item.subContent || item.title)
+                }));
+    
                 allNews.push(...news);
                 console.log(`${site.name}에서 ${news.length}개 뉴스 수집`);
             } catch (error) {
                 console.error(`크롤링 실패 (${site.name}):`, error);
             }
         }
-        
         return allNews;
     }
+    
 
     // 사이트 크롤링
     async crawlSite(site) {

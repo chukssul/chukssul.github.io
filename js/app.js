@@ -574,7 +574,7 @@ function displayArticles() {
             <div class="news-card-body">
                 <p class="news-summary">${article.description}</p>
                 <div class="news-actions">
-                    <button class="btn btn-secondary" onclick="event.stopPropagation(); translateArticle('${article.id}')">
+                    <button class="btn btn-secondary" onclick="translateArticle('${article.id}', event)">
                         <i class="fas fa-language"></i>
                         번역하기
                     </button>
@@ -589,27 +589,79 @@ function displayArticles() {
 }
 
 // 기사 번역
-function translateArticle(articleId) {
+async function translateArticle(articleId, event) {
     const article = articles.find(a => a.id === articleId);
     if (!article) return;
     
-    // 실제 번역 구현 (간단한 키워드 매핑)
-    const translatedTitle = translateText(article.title);
-    const translatedDescription = translateText(article.description);
-    
-    // 번역된 내용을 모달에 표시
-    openArticleModal(articleId, {
-        title: translatedTitle,
-        description: translatedDescription,
-        isTranslated: true
-    });
+    try {
+        // 번역 중 표시
+        const translateBtn = event.target;
+        const originalText = translateBtn.innerHTML;
+        translateBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 번역중...';
+        translateBtn.disabled = true;
+        
+        // 실제 번역 수행
+        const translatedTitle = await translateText(article.title);
+        const translatedDescription = await translateText(article.description);
+        
+        // 번역된 내용을 모달에 표시
+        openArticleModal(articleId, {
+            title: translatedTitle,
+            description: translatedDescription,
+            isTranslated: true
+        });
+        
+        // 버튼 복원
+        translateBtn.innerHTML = originalText;
+        translateBtn.disabled = false;
+        
+    } catch (error) {
+        console.error('번역 실패:', error);
+        alert('번역 중 오류가 발생했습니다. 다시 시도해주세요.');
+        
+        // 버튼 복원
+        const translateBtn = event.target;
+        translateBtn.innerHTML = '<i class="fas fa-language"></i> 번역하기';
+        translateBtn.disabled = false;
+    }
 }
 
-// 간단한 번역 함수
-function translateText(text) {
+// 실제 번역 함수 (무료 번역 API 사용)
+async function translateText(text) {
     if (!text) return '';
     
-    // 축구 관련 용어 번역 매핑
+    try {
+        // LibreTranslate 무료 API 사용
+        const response = await fetch('https://libretranslate.de/translate', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                q: text,
+                source: 'en',
+                target: 'ko',
+                format: 'text'
+            })
+        });
+        
+        if (!response.ok) {
+            throw new Error('번역 API 응답 실패');
+        }
+        
+        const result = await response.json();
+        return result.translatedText || text;
+        
+    } catch (error) {
+        console.error('번역 API 오류:', error);
+        
+        // 폴백: 간단한 키워드 번역
+        return fallbackTranslate(text);
+    }
+}
+
+// 폴백 번역 (API 실패 시 사용)
+function fallbackTranslate(text) {
     const translations = {
         'Manchester United': '맨체스터 유나이티드',
         'Liverpool': '리버풀',
@@ -631,38 +683,7 @@ function translateText(text) {
         'Serie A': '세리에 A',
         'Ligue 1': '리그 1',
         'Champions League': '챔피언스 리그',
-        'Europa League': '유로파 리그',
-        'transfer': '이적',
-        'signing': '영입',
-        'contract': '계약',
-        'goal': '골',
-        'assist': '어시스트',
-        'injury': '부상',
-        'suspension': '출장 정지',
-        'manager': '감독',
-        'coach': '코치',
-        'player': '선수',
-        'team': '팀',
-        'match': '경기',
-        'game': '경기',
-        'win': '승리',
-        'loss': '패배',
-        'draw': '무승부',
-        'victory': '승리',
-        'defeat': '패배',
-        'championship': '우승',
-        'title': '타이틀',
-        'league': '리그',
-        'cup': '컵',
-        'final': '결승',
-        'semifinal': '준결승',
-        'quarterfinal': '8강',
-        'round': '라운드',
-        'season': '시즌',
-        'club': '클럽',
-        'stadium': '경기장',
-        'fans': '팬들',
-        'supporters': '서포터즈'
+        'Europa League': '유로파 리그'
     };
     
     let translatedText = text;
