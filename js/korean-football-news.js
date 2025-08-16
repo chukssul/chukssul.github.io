@@ -150,16 +150,24 @@ class KoreanFootballNewsCollector {
                 const response = await this.fetchWithProxy(apiUrl);
                 const json = await response.json();
     
-                const news = json.list.map(item => ({
-                    id: `crawl-${Date.now()}-${Math.random()}`,
-                    title: item.title,
-                    description: item.subContent || item.title,
-                    link: this.makeAbsoluteUrl(item.link, site.url),
-                    publishedAt: this.parseNaverDate(item.datetime),
-                    source: site.name,
-                    type: 'crawl',
-                    summary: this.generateSummary(item.subContent || item.title)
-                }));
+                const news = json.list.map(item => {
+                    console.log('네이버 뉴스 아이템:', {
+                        title: item.title,
+                        datetime: item.datetime,
+                        parsedDate: this.parseNaverDate(item.datetime)
+                    });
+                    
+                    return {
+                        id: `crawl-${Date.now()}-${Math.random()}`,
+                        title: item.title,
+                        description: item.subContent || item.title,
+                        link: this.makeAbsoluteUrl(item.link, site.url),
+                        publishedAt: this.parseNaverDate(item.datetime),
+                        source: site.name,
+                        type: 'crawl',
+                        summary: this.generateSummary(item.subContent || item.title)
+                    };
+                });
     
                 allNews.push(...news);
                 console.log(`${site.name}에서 ${news.length}개 뉴스 수집`);
