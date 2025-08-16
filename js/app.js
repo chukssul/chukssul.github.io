@@ -574,6 +574,10 @@ function displayArticles() {
             <div class="news-card-body">
                 <p class="news-summary">${article.description}</p>
                 <div class="news-actions">
+                    <button class="btn btn-secondary" onclick="event.stopPropagation(); translateArticle('${article.id}')">
+                        <i class="fas fa-language"></i>
+                        번역하기
+                    </button>
                     <a href="${article.url || '#'}" target="_blank" class="btn btn-primary" onclick="event.stopPropagation()">
                         <i class="fas fa-external-link-alt"></i>
                         원문 보기
@@ -582,6 +586,23 @@ function displayArticles() {
             </div>
         </div>
     `).join('');
+}
+
+// 기사 번역
+function translateArticle(articleId) {
+    const article = articles.find(a => a.id === articleId);
+    if (!article) return;
+    
+    // 간단한 번역 (실제로는 번역 API를 사용해야 함)
+    const translatedTitle = `[번역] ${article.title}`;
+    const translatedDescription = `[번역된 내용] ${article.description}`;
+    
+    // 번역된 내용을 모달에 표시
+    openArticleModal(articleId, {
+        title: translatedTitle,
+        description: translatedDescription,
+        isTranslated: true
+    });
 }
 
 // 댓글 로드
@@ -661,11 +682,11 @@ function openMatchModal(matchId) {
     matchModal.style.display = 'block';
 }
 
-function openArticleModal(articleId) {
+function openArticleModal(articleId, updatedArticle = null) {
     const article = articles.find(a => a.id === articleId);
     if (!article || !articleModal) return;
-    
-    articleModalBody.innerHTML = `
+
+    let articleContent = `
         <div class="article-content">
             <h2>${article.title}</h2>
             <div class="article-meta">
@@ -673,15 +694,25 @@ function openArticleModal(articleId) {
                 <span class="date">${formatDate(article.publishedAt)}</span>
             </div>
             <div class="article-text">
-                <p>${article.content}</p>
+                <p>${article.description}</p>
             </div>
         </div>
     `;
-    
+
+    if (updatedArticle && updatedArticle.isTranslated) {
+        articleContent += `
+            <div class="article-translated-info">
+                <p><strong>번역된 제목:</strong> ${updatedArticle.title}</p>
+                <p><strong>번역된 내용:</strong> ${updatedArticle.description}</p>
+            </div>
+        `;
+    }
+
     // 댓글 로드
     const articleComments = comments[articleId] || [];
     displayComments(articleComments);
     
+    articleModalBody.innerHTML = articleContent;
     articleModal.style.display = 'block';
 }
 

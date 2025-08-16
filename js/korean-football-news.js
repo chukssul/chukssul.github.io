@@ -11,8 +11,8 @@ class KoreanFootballNewsCollector {
             CRAWL_SITES: [
                 {
                     name: '네이버 스포츠 축구',
-                    url: 'https://sports.news.naver.com/wfootball/news/index.nhn',
-                    selector: '.news_list li, .news_item, .news_list_item, .list_news li, .news_list .item, .news_list .list_item, .news_list .news_item, .news_list .news_list_item, .news_list .list_item, .news_list .item, .news_list .news_item, .news_list .news_list_item'
+                    url: 'https://sports.news.naver.com/wfootball/index.nhn',
+                    selector: '.news_list li, .news_item, .news_list_item, .list_news li, .news_list .item, .news_list .list_item, .news_list .news_item, .news_list .news_list_item'
                 }
             ],
             
@@ -190,17 +190,22 @@ class KoreanFootballNewsCollector {
                 '.news_list .item',
                 '.news_list .news_item',
                 '.news_list .news_list_item',
-                '.news_list .list_item',
-                '.news_list .item',
-                '.news_list .news_item',
-                '.news_list .news_list_item',
                 // 더 일반적인 선택자들
                 'li',
                 '.item',
                 '.list_item',
                 '.news_item',
                 '.article_item',
-                '.content_item'
+                '.content_item',
+                // 네이버 특화 선택자들
+                '.news_list .list_item',
+                '.news_list .item',
+                '.news_list .news_item',
+                '.news_list .news_list_item',
+                '.news_list .list_item',
+                '.news_list .item',
+                '.news_list .news_item',
+                '.news_list .news_list_item'
             ];
             
             let newsElements = [];
