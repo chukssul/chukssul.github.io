@@ -151,18 +151,22 @@ class KoreanFootballNewsCollector {
                 const json = await response.json();
     
                 const news = json.list.map(item => {
+                    console.log('네이버 뉴스 아이템 전체:', item);
                     console.log('네이버 뉴스 아이템:', {
                         title: item.title,
                         datetime: item.datetime,
                         parsedDate: this.parseNaverDate(item.datetime),
-                        link: item.link
+                        link: item.link,
+                        url: item.url,
+                        articleUrl: item.articleUrl,
+                        newsUrl: item.newsUrl
                     });
                     
                     return {
                         id: `crawl-${Date.now()}-${Math.random()}`,
                         title: item.title,
                         description: item.subContent || item.title,
-                        link: item.link, // 절대 URL이므로 그대로 사용
+                        link: item.link || item.url || item.articleUrl || item.newsUrl || '#',
                         publishedAt: this.parseNaverDate(item.datetime),
                         source: site.name,
                         type: 'crawl',
