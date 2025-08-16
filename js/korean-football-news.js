@@ -155,7 +155,7 @@ class KoreanFootballNewsCollector {
                     title: item.title,
                     description: item.subContent || item.title,
                     link: this.makeAbsoluteUrl(item.link, site.url),
-                    publishedAt: new Date(item.datetime.replace(' ', 'T')),
+                    publishedAt: this.parseNaverDate(item.datetime),
                     source: site.name,
                     type: 'crawl',
                     summary: this.generateSummary(item.subContent || item.title)
@@ -360,6 +360,25 @@ class KoreanFootballNewsCollector {
         try {
             return new Date(dateString);
         } catch (error) {
+            return new Date();
+        }
+    }
+
+    // 네이버 날짜 파싱 (YYYYMMDDHHMMSS 형식)
+    parseNaverDate(dateString) {
+        if (!dateString) return new Date();
+
+        try {
+            const year = dateString.substring(0, 4);
+            const month = dateString.substring(4, 6);
+            const day = dateString.substring(6, 8);
+            const hour = dateString.substring(8, 10);
+            const minute = dateString.substring(10, 12);
+            const second = dateString.substring(12, 14);
+
+            return new Date(`${year}-${month}-${day}T${hour}:${minute}:${second}`);
+        } catch (error) {
+            console.error(`네이버 날짜 파싱 실패: ${dateString}`, error);
             return new Date();
         }
     }
