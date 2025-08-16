@@ -152,23 +152,26 @@ class KoreanFootballNewsCollector {
     
                 const news = json.list.map(item => {
                     console.log('네이버 뉴스 아이템 전체:', item);
+                    
+                    // 네이버 뉴스 URL 생성: https://sports.news.naver.com/news?oid=421&aid=0008431018
+                    const newsUrl = `https://sports.news.naver.com/news?oid=${item.oid}&aid=${item.aid}`;
+                    
                     console.log('네이버 뉴스 아이템:', {
                         title: item.title,
                         datetime: item.datetime,
                         parsedDate: this.parseNaverDate(item.datetime),
-                        link: item.link,
-                        url: item.url,
-                        articleUrl: item.articleUrl,
-                        newsUrl: item.newsUrl
+                        oid: item.oid,
+                        aid: item.aid,
+                        generatedUrl: newsUrl
                     });
                     
                     return {
                         id: `crawl-${Date.now()}-${Math.random()}`,
                         title: item.title,
                         description: item.subContent || item.title,
-                        link: item.link || item.url || item.articleUrl || item.newsUrl || '#',
+                        link: newsUrl,
                         publishedAt: this.parseNaverDate(item.datetime),
-                        source: site.name,
+                        source: item.officeName || site.name,
                         type: 'crawl',
                         summary: this.generateSummary(item.subContent || item.title)
                     };
