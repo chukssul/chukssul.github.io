@@ -94,8 +94,8 @@ function initializeApp() {
     setupEventListeners();
     loadKoreanNews();
     loadInternationalNews();
-    loadMatches();
-    loadArticles();
+    // loadMatches(); // 향후 개발 예정
+    // loadArticles(); // 향후 개발 예정
     loadComments();
 }
 
@@ -220,7 +220,7 @@ async function loadKoreanNews() {
 async function refreshKoreanNews() {
     try {
         if (window.koreanFootballNews) {
-            const news = await window.koreanFootballNews.collectNews();
+            const news = await window.koreanFootballNews.collectAllNews();
             koreanNews = news;
             displayKoreanNews(news);
         }
