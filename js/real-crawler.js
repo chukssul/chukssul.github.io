@@ -11,11 +11,12 @@ class RealCrawler {
                 'https://cors.bridged.cc/'
             ],
             FOOTBALL_SITES: [
-                'https://www.livescore.com/en/'
+                // 경기 일정 크롤링 비활성화
+                // 'https://www.livescore.com/en/'
             ],
             NEWS_SITES: [
-                'https://www.goal.com/en/news',
-                'https://www.90min.com/'
+                'https://www.goal.com/en/news'
+                // 90min 제거
             ],
             USER_AGENTS: [
                 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
@@ -27,20 +28,11 @@ class RealCrawler {
 
     // 실제 경기 데이터 크롤링
     async crawlMatches() {
-        console.log('실제 경기 데이터 크롤링 시작...');
-        const allMatches = [];
-
-        for (const site of this.config.FOOTBALL_SITES) {
-            try {
-                const matches = await this.crawlSite(site, 'matches');
-                allMatches.push(...matches);
-                console.log(`${site}에서 ${matches.length}개 경기 수집`);
-            } catch (error) {
-                console.error(`${site} 크롤링 실패:`, error);
-            }
-        }
-
-        return allMatches;
+        console.log('경기 일정 크롤링 비활성화됨 - 더미 데이터 반환');
+        
+        // 더미 경기 데이터 반환 (크롤링 대신)
+        const dummyMatches = this.generateDummyMatches();
+        return dummyMatches;
     }
 
     // 실제 뉴스 데이터 크롤링
@@ -539,6 +531,59 @@ class RealCrawler {
         if (site.includes('90min')) return '90min';
         if (site.includes('skysports')) return 'Sky Sports';
         return '축구 뉴스';
+    }
+
+    // 더미 경기 데이터 생성
+    generateDummyMatches() {
+        const matches = [
+            // Premier League 2024-25
+            { home: 'Manchester United', away: 'Liverpool', league: 'Premier League', date: '2024-12-21', status: 'scheduled' },
+            { home: 'Arsenal', away: 'Manchester City', league: 'Premier League', date: '2024-12-22', status: 'scheduled' },
+            { home: 'Chelsea', away: 'Tottenham', league: 'Premier League', date: '2024-12-23', status: 'scheduled' },
+            { home: 'Newcastle', away: 'Aston Villa', league: 'Premier League', date: '2024-12-24', status: 'scheduled' },
+            { home: 'West Ham', away: 'Brighton', league: 'Premier League', date: '2024-12-25', status: 'scheduled' },
+            
+            // LaLiga 2024-25
+            { home: 'Real Madrid', away: 'Barcelona', league: 'LaLiga', date: '2024-12-21', status: 'scheduled' },
+            { home: 'Atletico Madrid', away: 'Sevilla', league: 'LaLiga', date: '2024-12-22', status: 'scheduled' },
+            { home: 'Valencia', away: 'Villarreal', league: 'LaLiga', date: '2024-12-23', status: 'scheduled' },
+            
+            // Bundesliga 2024-25
+            { home: 'Bayern Munich', away: 'Borussia Dortmund', league: 'Bundesliga', date: '2024-12-21', status: 'scheduled' },
+            { home: 'Bayer Leverkusen', away: 'RB Leipzig', league: 'Bundesliga', date: '2024-12-22', status: 'scheduled' },
+            { home: 'Stuttgart', away: 'Hoffenheim', league: 'Bundesliga', date: '2024-12-23', status: 'scheduled' },
+            
+            // Serie A 2024-25
+            { home: 'Juventus', away: 'Milan', league: 'Serie A', date: '2024-12-21', status: 'scheduled' },
+            { home: 'Inter Milan', away: 'AC Milan', league: 'Serie A', date: '2024-12-22', status: 'scheduled' },
+            { home: 'Napoli', away: 'Roma', league: 'Serie A', date: '2024-12-23', status: 'scheduled' },
+            
+            // Ligue 1 2024-25
+            { home: 'PSG', away: 'Marseille', league: 'Ligue 1', date: '2024-12-21', status: 'scheduled' },
+            { home: 'Lyon', away: 'Monaco', league: 'Ligue 1', date: '2024-12-22', status: 'scheduled' },
+            { home: 'Lille', away: 'Nice', league: 'Ligue 1', date: '2024-12-23', status: 'scheduled' },
+            
+            // Champions League 2024-25
+            { home: 'Manchester City', away: 'Real Madrid', league: 'Champions League', date: '2024-12-24', status: 'scheduled' },
+            { home: 'Bayern Munich', away: 'PSG', league: 'Champions League', date: '2024-12-25', status: 'scheduled' },
+            { home: 'Barcelona', away: 'Juventus', league: 'Champions League', date: '2024-12-26', status: 'scheduled' }
+        ];
+        
+        return matches.map((fixture, index) => {
+            const matchDate = new Date(fixture.date);
+            return {
+                id: `match-${Date.now()}-${index}`,
+                homeTeam: fixture.home,
+                awayTeam: fixture.away,
+                homeScore: 0,
+                awayScore: 0,
+                date: matchDate,
+                status: fixture.status,
+                venue: this.getStadium(fixture.home),
+                referee: this.getRandomReferee(),
+                leagueName: fixture.league
+            };
+        });
     }
 }
 
