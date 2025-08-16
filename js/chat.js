@@ -80,9 +80,16 @@ class ChatSystem {
         }
     }
 
+    // Firebase 경로를 안전하게 만드는 함수
+    sanitizePath(path) {
+        return path.replace(/[.#$\[\]]/g, '_').replace(/-/g, '_');
+    }
+
     // 채팅 시작 (뉴스 또는 기사 모달이 열릴 때)
     startChat(type, id) {
-        this.currentChatId = `${type}_${id}`;
+        // Firebase 경로 규칙에 맞게 ID 정리
+        const safeId = this.sanitizePath(id);
+        this.currentChatId = `${type}_${safeId}`;
         this.loadChatHistory();
         this.listenToNewMessages();
         
