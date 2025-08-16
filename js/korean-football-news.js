@@ -11,7 +11,7 @@ class KoreanFootballNewsCollector {
             CRAWL_SITES: [
                 {
                     name: '네이버 스포츠 축구',
-                    url: 'https://sports.news.naver.com/wfootball/index.nhn',
+                    url: 'https://sports.news.naver.com/wfootball/news/index.nhn',
                     selector: '.news_list li, .news_item, .news_list_item, .list_news li, .news_list .item, .news_list .list_item, .news_list .news_item, .news_list .news_list_item'
                 }
             ],
@@ -205,7 +205,14 @@ class KoreanFootballNewsCollector {
                 '.news_list .list_item',
                 '.news_list .item',
                 '.news_list .news_item',
-                '.news_list .news_list_item'
+                '.news_list .news_list_item',
+                // 더 구체적인 선택자들
+                '.news_list .list_item a',
+                '.news_list .item a',
+                '.news_list .news_item a',
+                '.news_list .news_list_item a',
+                '.list_news .item a',
+                '.article_list .item a'
             ];
             
             let newsElements = [];
@@ -319,6 +326,7 @@ class KoreanFootballNewsCollector {
             .replace(/&[^;]+;/g, '') // HTML 엔티티 제거
             .replace(/<[^>]*>/g, '') // HTML 태그 제거
             .replace(/\s+/g, ' ') // 연속 공백 제거
+            .replace(/^\s+/, '') // 첫 줄 앞 공백 제거
             .substring(0, 200) // 200자로 제한
             .trim();
     }

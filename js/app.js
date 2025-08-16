@@ -593,9 +593,9 @@ function translateArticle(articleId) {
     const article = articles.find(a => a.id === articleId);
     if (!article) return;
     
-    // 간단한 번역 (실제로는 번역 API를 사용해야 함)
-    const translatedTitle = `[번역] ${article.title}`;
-    const translatedDescription = `[번역된 내용] ${article.description}`;
+    // 실제 번역 구현 (간단한 키워드 매핑)
+    const translatedTitle = translateText(article.title);
+    const translatedDescription = translateText(article.description);
     
     // 번역된 내용을 모달에 표시
     openArticleModal(articleId, {
@@ -603,6 +603,77 @@ function translateArticle(articleId) {
         description: translatedDescription,
         isTranslated: true
     });
+}
+
+// 간단한 번역 함수
+function translateText(text) {
+    if (!text) return '';
+    
+    // 축구 관련 용어 번역 매핑
+    const translations = {
+        'Manchester United': '맨체스터 유나이티드',
+        'Liverpool': '리버풀',
+        'Arsenal': '아스널',
+        'Chelsea': '첼시',
+        'Tottenham': '토트넘',
+        'Manchester City': '맨체스터 시티',
+        'Real Madrid': '레알 마드리드',
+        'Barcelona': '바르셀로나',
+        'Bayern Munich': '바이에른 뮌헨',
+        'Borussia Dortmund': '보루시아 도르트문트',
+        'Juventus': '유벤투스',
+        'AC Milan': 'AC 밀란',
+        'Inter Milan': '인터 밀란',
+        'PSG': '파리 생제르맹',
+        'Premier League': '프리미어 리그',
+        'La Liga': '라 리가',
+        'Bundesliga': '분데스리가',
+        'Serie A': '세리에 A',
+        'Ligue 1': '리그 1',
+        'Champions League': '챔피언스 리그',
+        'Europa League': '유로파 리그',
+        'transfer': '이적',
+        'signing': '영입',
+        'contract': '계약',
+        'goal': '골',
+        'assist': '어시스트',
+        'injury': '부상',
+        'suspension': '출장 정지',
+        'manager': '감독',
+        'coach': '코치',
+        'player': '선수',
+        'team': '팀',
+        'match': '경기',
+        'game': '경기',
+        'win': '승리',
+        'loss': '패배',
+        'draw': '무승부',
+        'victory': '승리',
+        'defeat': '패배',
+        'championship': '우승',
+        'title': '타이틀',
+        'league': '리그',
+        'cup': '컵',
+        'final': '결승',
+        'semifinal': '준결승',
+        'quarterfinal': '8강',
+        'round': '라운드',
+        'season': '시즌',
+        'club': '클럽',
+        'stadium': '경기장',
+        'fans': '팬들',
+        'supporters': '서포터즈'
+    };
+    
+    let translatedText = text;
+    
+    // 영어 단어를 한국어로 번역
+    Object.keys(translations).forEach(english => {
+        const regex = new RegExp(english, 'gi');
+        translatedText = translatedText.replace(regex, translations[english]);
+    });
+    
+    return translatedText;
 }
 
 // 댓글 로드
