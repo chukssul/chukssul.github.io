@@ -3,6 +3,7 @@ let currentFilter = 'upcoming';
 let matches = [];
 let articles = [];
 let koreanNews = [];
+let internationalNews = [];
 let comments = {};
 
 // 실제 크롤링을 위한 설정
@@ -92,6 +93,7 @@ document.addEventListener('DOMContentLoaded', function() {
 function initializeApp() {
     setupEventListeners();
     loadKoreanNews();
+    loadInternationalNews();
     loadMatches();
     loadArticles();
     loadComments();
@@ -227,6 +229,49 @@ async function refreshKoreanNews() {
     }
 }
 
+// 해외 축구 뉴스 로드
+async function loadInternationalNews() {
+    try {
+        showLoading('international-news');
+        
+        // 캐시된 뉴스가 있으면 먼저 표시
+        const cachedNews = window.internationalFootballNews.getCachedNews();
+        if (cachedNews.length > 0) {
+            internationalNews = cachedNews;
+            displayInternationalNews(cachedNews);
+        }
+        
+        // 새로운 뉴스 수집
+        const news = await window.internationalFootballNews.collectAllNews();
+        internationalNews = news;
+        
+        // 캐시 업데이트
+        window.internationalFootballNews.updateCache(news);
+        
+        displayInternationalNews(news);
+        
+        hideLoading('international-news');
+        
+    } catch (error) {
+        console.error('해외 축구 뉴스 로드 실패:', error);
+        hideLoading('international-news');
+        showError('international-news', '뉴스를 불러오는 중 오류가 발생했습니다.');
+    }
+}
+
+// 해외 축구 뉴스 새로고침
+async function refreshInternationalNews() {
+    try {
+        if (window.internationalFootballNews) {
+            const news = await window.internationalFootballNews.collectAllNews();
+            internationalNews = news;
+            displayInternationalNews(news);
+        }
+    } catch (error) {
+        console.error('해외 축구 뉴스 새로고침 실패:', error);
+    }
+}
+
 // 한국 축구 뉴스 표시
 function displayKoreanNews(newsToDisplay) {
     const koreanNewsGrid = document.getElementById('korean-news-grid');
@@ -293,6 +338,62 @@ function refreshKoreanNews() {
     if (window.koreanFootballNews) {
         window.koreanFootballNews.collectNews();
     }
+}
+
+// 해외 축구 뉴스 표시
+function displayInternationalNews(newsToDisplay) {
+    const internationalNewsGrid = document.getElementById('international-news-grid');
+    
+    if (!newsToDisplay || newsToDisplay.length === 0) {
+        internationalNewsGrid.innerHTML = `
+            <div class="no-data">
+                <i class="fas fa-search"></i>
+                <p>검색 결과가 없습니다.</p>
+            </div>
+        `;
+        return;
+    }
+    
+    internationalNewsGrid.innerHTML = newsToDisplay.map(news => `
+        <div class="news-card" onclick="openInternationalNewsModal('${news.id}')">
+            <div class="news-card-header">
+                <h3 class="news-title">${news.title}</h3>
+                <div class="news-meta">
+                    <div class="news-source-group">
+                        <span class="news-source">${news.source}</span>
+                        ${news.reporter ? `<span class="news-reporter">${news.reporter} 기자</span>` : ''}
+                    </div>
+                    <span class="news-date">${formatDate(news.publishedAt)}</span>
+                </div>
+            </div>
+            <div class="news-card-body">
+                <p class="news-summary">${news.summary}</p>
+                <div class="news-actions">
+                    <a href="${news.link}" target="_blank" class="btn btn-primary" onclick="event.stopPropagation()">
+                        <i class="fas fa-external-link-alt"></i>
+                        원문 보기
+                    </a>
+                </div>
+            </div>
+        </div>
+    `).join('');
+}
+
+// 해외 축구 뉴스 검색
+function searchInternationalNews() {
+    const searchTerm = document.getElementById('international-news-search').value.toLowerCase();
+    
+    if (!internationalNews || internationalNews.length === 0) {
+        return;
+    }
+    
+    const filteredNews = internationalNews.filter(news => 
+        news.title.toLowerCase().includes(searchTerm) ||
+        news.description.toLowerCase().includes(searchTerm) ||
+        news.source.toLowerCase().includes(searchTerm)
+    );
+    
+    displayInternationalNews(filteredNews);
 }
 
 // 뉴스 모달 열기
@@ -374,6 +475,25 @@ function addNewsComment() {
 function getCurrentNewsId() {
     const title = document.getElementById('modal-news-title').textContent;
     return koreanNews.find(news => news.title === title)?.id;
+}
+
+// 뉴스 모달 열기
+function openInternationalNewsModal(newsId) {
+    const news = internationalNews.find(n => n.id === newsId);
+    if (!news || !newsModal) return;
+    
+    // 모달 내용 설정
+    document.getElementById('modal-news-title').textContent = news.title;
+    document.getElementById('modal-news-source').textContent = news.source;
+    document.getElementById('modal-news-date').textContent = formatDate(news.publishedAt);
+    document.getElementById('modal-news-summary').textContent = news.summary;
+    document.getElementById('modal-news-link').href = news.link;
+    
+    // 댓글 로드
+    loadNewsComments(newsId);
+    
+    // 모달 표시
+    newsModal.style.display = 'block';
 }
 
 // 로딩 표시

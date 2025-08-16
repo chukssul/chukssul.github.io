@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>한국 축구 뉴스 & 경기 일정</title>
+    <title>축썰</title>
     <link rel="stylesheet" href="css/styles.css">
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
@@ -13,10 +13,11 @@
         <div class="container">
             <h1 class="logo">
                 <i class="fas fa-futbol"></i>
-                한국 축구 뉴스 & 경기 일정
+                축썰
             </h1>
-            <nav class="nav">
-                <button class="nav-btn active" data-tab="korean-news">한국 축구 뉴스</button>
+            <nav class="nav-tabs">
+                <button class="nav-btn active" data-tab="korean-news">국내 축구 속보</button>
+                <button class="nav-btn" data-tab="international-news">해외 축구 속보</button>
                 <button class="nav-btn" data-tab="matches">경기 일정</button>
                 <button class="nav-btn" data-tab="articles">해외 축구 기사</button>
             </nav>
@@ -44,6 +45,29 @@
                 </div>
                 
                 <div class="news-grid" id="korean-news-grid">
+                    <!-- 뉴스 카드들이 여기에 동적으로 생성됩니다 -->
+                </div>
+            </section>
+
+            <!-- 해외 축구 속보 -->
+            <section id="international-news" class="tab-content">
+                <div class="section-header">
+                    <h2>해외 축구 속보</h2>
+                    <div class="news-controls">
+                        <div class="search-box">
+                            <input type="text" id="international-news-search" placeholder="뉴스 검색...">
+                            <button onclick="searchInternationalNews()">
+                                <i class="fas fa-search"></i>
+                            </button>
+                        </div>
+                        <button class="refresh-btn" onclick="refreshInternationalNews()">
+                            <i class="fas fa-sync-alt"></i>
+                            새로고침
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="news-grid" id="international-news-grid">
                     <!-- 뉴스 카드들이 여기에 동적으로 생성됩니다 -->
                 </div>
             </section>
@@ -161,9 +185,10 @@
     </footer>
 
     <script src="config.js"></script>
+    <script src="js/korean-football-news.js"></script>
+    <script src="js/international-football-news.js"></script>
     <script src="js/real-crawler.js"></script>
     <script src="js/translator.js"></script>
-    <script src="js/korean-football-news.js"></script>
     <script src="js/app.js"></script>
 </body>
 </html> 
