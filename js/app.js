@@ -133,8 +133,10 @@ function setupEventListeners() {
         searchBtn.addEventListener('click', searchKoreanNews);
     }
     
-    if (newsSearch) {
-        newsSearch.addEventListener('keypress', (e) => {
+    // 국내 축구 뉴스 검색 이벤트 (ID 수정)
+    const koreanNewsSearch = document.getElementById('korean-news-search');
+    if (koreanNewsSearch) {
+        koreanNewsSearch.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') {
                 searchKoreanNews();
             }
