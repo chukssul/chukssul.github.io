@@ -336,16 +336,35 @@ class ChatSystem {
     
     // 뉴스 카드에 채팅 표시 추가
     addChatIndicatorToNewsCard(newsId) {
-        // 뉴스 카드 찾기
-        const newsCard = document.querySelector(`[onclick*="${newsId}"]`);
-        if (!newsCard) return;
+        // 뉴스 카드 찾기 (더 정확한 선택자 사용)
+        const newsCards = document.querySelectorAll('.news-card');
+        let newsCard = null;
+        
+        for (const card of newsCards) {
+            const onclick = card.getAttribute('onclick');
+            if (onclick && onclick.includes(newsId)) {
+                newsCard = card;
+                break;
+            }
+        }
+        
+        if (!newsCard) {
+            console.log('뉴스 카드를 찾을 수 없음:', newsId);
+            return;
+        }
         
         // 이미 채팅 표시가 있으면 추가하지 않음
-        if (newsCard.querySelector('.chat-indicator')) return;
+        if (newsCard.querySelector('.chat-indicator')) {
+            console.log('이미 채팅 표시가 있음:', newsId);
+            return;
+        }
         
         // news-stats 섹션 찾기
         const newsStats = newsCard.querySelector('.news-stats');
-        if (!newsStats) return;
+        if (!newsStats) {
+            console.log('news-stats를 찾을 수 없음:', newsId);
+            return;
+        }
         
         // 채팅 표시 요소 생성
         const chatIndicator = document.createElement('div');
@@ -354,6 +373,7 @@ class ChatSystem {
         
         // news-stats에 추가
         newsStats.appendChild(chatIndicator);
+        console.log('채팅 표시 추가 완료:', newsId);
     }
     
     // 환영 메시지 표시

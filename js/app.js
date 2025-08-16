@@ -241,6 +241,9 @@ async function refreshKoreanNews() {
         if (window.koreanFootballNews) {
             const news = await window.koreanFootballNews.collectAllNews();
             koreanNews = news;
+            
+            // 통계 데이터 로드 후 표시
+            await loadNewsStats(news);
             displayKoreanNews(news);
         }
         
@@ -292,6 +295,9 @@ async function refreshInternationalNews() {
         if (window.internationalFootballNews) {
             const news = await window.internationalFootballNews.collectAllNews();
             internationalNews = news;
+            
+            // 통계 데이터 로드 후 표시
+            await loadNewsStats(news);
             displayInternationalNews(news);
         }
         
@@ -488,12 +494,21 @@ async function checkAndDisplayChatStatus(newsId) {
             
             if (hasMessages) {
                 // 뉴스 데이터에 채팅 표시 플래그 추가
-                const safeNewsId = sanitizeFirebasePath(newsId);
                 const newsRef = database.ref(`news/${safeNewsId}`);
                 await newsRef.update({ hasChat: true });
                 
-                // UI에 채팅 표시 추가
-                const newsCard = document.querySelector(`[onclick*="${newsId}"]`);
+                // UI에 채팅 표시 추가 (더 정확한 방법 사용)
+                const newsCards = document.querySelectorAll('.news-card');
+                let newsCard = null;
+                
+                for (const card of newsCards) {
+                    const onclick = card.getAttribute('onclick');
+                    if (onclick && onclick.includes(newsId)) {
+                        newsCard = card;
+                        break;
+                    }
+                }
+                
                 if (newsCard && !newsCard.querySelector('.chat-indicator')) {
                     const newsStats = newsCard.querySelector('.news-stats');
                     if (newsStats) {
@@ -501,6 +516,7 @@ async function checkAndDisplayChatStatus(newsId) {
                         chatIndicator.className = 'chat-indicator';
                         chatIndicator.innerHTML = '<i class="fas fa-comments"></i> 채팅';
                         newsStats.appendChild(chatIndicator);
+                        console.log('채팅 표시 추가됨:', newsId);
                     }
                 }
             }
