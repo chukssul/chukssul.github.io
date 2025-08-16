@@ -243,8 +243,10 @@ function displayKoreanNews(newsToDisplay = koreanNews) {
             <div class="news-card-header">
                 <h3 class="news-title">${news.title}</h3>
                 <div class="news-meta">
-                    <span class="news-source">${news.source}</span>
-                    ${news.reporter ? `<span class="news-reporter">${news.reporter} 기자</span>` : ''}
+                    <div class="news-source-group">
+                        <span class="news-source">${news.source}</span>
+                        ${news.reporter ? `<span class="news-reporter">${news.reporter} 기자</span>` : ''}
+                    </div>
                     <span class="news-date">${formatDate(news.publishedAt)}</span>
                 </div>
             </div>

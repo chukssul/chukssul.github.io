@@ -264,11 +264,11 @@ body {
     overflow: hidden;
     text-overflow: ellipsis;
     word-break: keep-all;
-    height: 4.8rem; /* 3줄 고정 높이: 3 * 1.6 * 1rem */
+    height: 5.2rem; /* 3줄 고정 높이: 3 * 1.6 * 1rem + 여유 공간 */
     box-sizing: border-box;
     position: relative;
     /* 3줄 강제 제한 및 말줄임표 표시 */
-    max-height: 4.8rem;
+    max-height: 5.2rem;
     -webkit-line-clamp: 3 !important;
     line-clamp: 3;
     /* 긴 텍스트 처리를 위한 추가 속성 */
@@ -351,11 +351,16 @@ body {
     gap: 1rem;
 }
 
+.news-source-group {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
 .news-reporter {
     color: #666;
     font-size: 0.85rem;
     font-weight: 500;
-    margin-right: 0.5rem;
     background-color: #f0f0f0;
     padding: 0.2rem 0.5rem;
     border-radius: 0.25rem;
