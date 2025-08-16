@@ -2,46 +2,17 @@
 class KoreanFootballNewsCollector {
     constructor() {
         this.config = {
-            // 실제로 작동하는 RSS 피드 목록 (직접 확인된 주소들)
+            // 네이버 스포츠 축구만 사용
             RSS_FEEDS: [
-                // 네이버 스포츠 축구 (실제 작동하는 피드)
-                'https://sports.news.naver.com/wfootball/index.nhn?rss=1',
-                // 다음 스포츠 축구 (실제 작동하는 피드)
-                'https://sports.daum.net/rss/축구.xml',
-                // 조선일보 스포츠 (실제 작동하는 피드)
-                'https://sports.chosun.com/rss/축구.xml',
-                // 중앙일보 스포츠 (실제 작동하는 피드)
-                'https://sports.joins.com/rss/축구.xml',
-                // 한겨레 스포츠 (실제 작동하는 피드)
-                'https://sports.hani.co.kr/rss/축구.xml',
-                // 경향신문 스포츠 (실제 작동하는 피드)
-                'https://sports.khan.co.kr/rss/축구.xml',
-                // 인터풋볼 (실제 작동하는 피드)
-                'https://www.interfootball.co.kr/rss/news.xml',
-                // 풋볼리스트 (실제 작동하는 피드)
-                'https://www.footballist.co.kr/rss/news.xml',
-                // 베스트일레븐 (실제 작동하는 피드)
-                'https://www.besteleven.com/rss/news.xml',
-                // K리그 공식 (실제 작동하는 피드)
-                'https://www.kleague.com/rss/news.xml'
+                'https://sports.news.naver.com/wfootball/index.nhn?rss=1'
             ],
             
-            // 실제 작동하는 크롤링 대상 사이트
+            // 네이버 스포츠 축구만 크롤링
             CRAWL_SITES: [
                 {
                     name: '네이버 스포츠 축구',
                     url: 'https://sports.news.naver.com/wfootball/index.nhn',
-                    selector: '.news_list li, .news_item, .news_list_item'
-                },
-                {
-                    name: '다음 스포츠 축구',
-                    url: 'https://sports.daum.net/football',
-                    selector: '.list_news li, .news_item, .news_list_item'
-                },
-                {
-                    name: '인터풋볼',
-                    url: 'https://www.interfootball.co.kr/news',
-                    selector: '.news_list li, .news_item, .news_list_item'
+                    selector: '.news_list li, .news_item, .news_list_item, .list_news li, .news_list .item, .news_list .list_item, .news_list .news_item, .news_list .news_list_item'
                 }
             ],
             
@@ -52,9 +23,7 @@ class KoreanFootballNewsCollector {
                 'https://cors-anywhere.herokuapp.com/',
                 'https://thingproxy.freeboard.io/fetch/',
                 'https://api.codetabs.com/v1/proxy?quest=',
-                'https://cors.bridged.cc/',
-                'https://cors-anywhere.herokuapp.com/',
-                'https://api.allorigins.win/raw?url='
+                'https://cors.bridged.cc/'
             ],
             
             // User Agent 목록
@@ -75,36 +44,23 @@ class KoreanFootballNewsCollector {
         
         const allNews = [];
         
-        // 1. RSS 피드에서 뉴스 수집 (빠른 타임아웃)
+        // 1. RSS 피드에서 뉴스 수집
         try {
-            const rssNews = await Promise.race([
-                this.collectFromRSS(),
-                new Promise(resolve => setTimeout(() => resolve([]), 5000)) // 5초 타임아웃
-            ]);
+            const rssNews = await this.collectFromRSS();
             allNews.push(...rssNews);
         } catch (error) {
-            console.log('RSS 수집 실패, 더미 뉴스로 진행');
+            console.log('RSS 수집 실패:', error);
         }
         
-        // 2. 크롤링으로 뉴스 수집 (빠른 타임아웃)
+        // 2. 크롤링으로 뉴스 수집
         try {
-            const crawlNews = await Promise.race([
-                this.collectFromCrawling(),
-                new Promise(resolve => setTimeout(() => resolve([]), 5000)) // 5초 타임아웃
-            ]);
+            const crawlNews = await this.collectFromCrawling();
             allNews.push(...crawlNews);
         } catch (error) {
-            console.log('크롤링 실패, 더미 뉴스로 진행');
+            console.log('크롤링 실패:', error);
         }
         
-        // 3. 폴백: 더미 뉴스 생성 (실제 수집이 실패한 경우)
-        if (allNews.length === 0) {
-            console.log('실제 뉴스 수집 실패, 더미 뉴스 생성...');
-            const dummyNews = this.generateDummyNews();
-            allNews.push(...dummyNews);
-        }
-        
-        // 4. 중복 제거 및 정렬
+        // 3. 중복 제거 및 정렬
         const uniqueNews = this.removeDuplicates(allNews);
         const sortedNews = this.sortByDate(uniqueNews);
         
@@ -138,6 +94,12 @@ class KoreanFootballNewsCollector {
             
             console.log(`RSS 응답 길이: ${text.length}`);
             console.log(`RSS 응답 샘플: ${text.substring(0, 500)}`);
+            
+            // XML이 아닌 HTML이 반환되는 경우 처리
+            if (text.includes('<!DOCTYPE html>') || text.includes('<html')) {
+                console.log('HTML 응답 감지, 크롤링으로 전환');
+                return [];
+            }
             
             // XML 파싱
             const parser = new DOMParser();
@@ -219,7 +181,21 @@ class KoreanFootballNewsCollector {
                 '.list_news li',
                 '.article_list li',
                 '.news_list .item',
-                '.news_list .list_item'
+                '.news_list .list_item',
+                '.news_list .news_item',
+                '.news_list .news_list_item',
+                '.news_list .list_item',
+                '.news_list .item',
+                '.news_list .news_item',
+                '.news_list .news_list_item',
+                '.news_list .list_item',
+                '.news_list .item',
+                '.news_list .news_item',
+                '.news_list .news_list_item',
+                '.news_list .list_item',
+                '.news_list .item',
+                '.news_list .news_item',
+                '.news_list .news_list_item'
             ];
             
             let newsElements = [];
@@ -295,64 +271,6 @@ class KoreanFootballNewsCollector {
         }
         
         throw new Error('모든 프록시 실패');
-    }
-
-    // 더미 뉴스 생성 (폴백용)
-    generateDummyNews() {
-        const dummyNews = [
-            {
-                id: `dummy-1`,
-                title: '손흥민, 토트넘에서 뛰어난 활약',
-                description: '한국 대표팀 주장 손흥민이 토트넘에서 좋은 활약을 보이고 있습니다.',
-                link: '#',
-                publishedAt: new Date(),
-                source: '네이버 스포츠',
-                type: 'dummy',
-                summary: '손흥민 선수가 토트넘에서 뛰어난 활약을 보이고 있습니다. 프리미어리그에서 꾸준한 득점을 기록하며 팀의 핵심 선수로 자리잡고 있습니다.'
-            },
-            {
-                id: `dummy-2`,
-                title: '김민재, 바이에른 뮌헨 적응 완료',
-                description: '김민재 선수가 바이에른 뮌헨에 완벽하게 적응했습니다.',
-                link: '#',
-                publishedAt: new Date(Date.now() - 2 * 60 * 60 * 1000),
-                source: '다음 스포츠',
-                type: 'dummy',
-                summary: '김민재 선수가 바이에른 뮌헨에 완벽하게 적응했습니다. 분데스리가에서 안정적인 수비를 보여주며 팀의 핵심 수비수로 자리잡고 있습니다.'
-            },
-            {
-                id: `dummy-3`,
-                title: '이강인, PSG에서 새로운 도전',
-                description: '이강인 선수가 PSG에서 새로운 도전을 시작했습니다.',
-                link: '#',
-                publishedAt: new Date(Date.now() - 4 * 60 * 60 * 1000),
-                source: '조선일보 스포츠',
-                type: 'dummy',
-                summary: '이강인 선수가 PSG에서 새로운 도전을 시작했습니다. 리그앙에서 자신만의 스타일로 경기를 이끌어가고 있습니다.'
-            },
-            {
-                id: `dummy-4`,
-                title: '황희찬, 울버햄튼에서 활약',
-                description: '황희찬 선수가 울버햄튼에서 좋은 활약을 보이고 있습니다.',
-                link: '#',
-                publishedAt: new Date(Date.now() - 6 * 60 * 60 * 1000),
-                source: '중앙일보 스포츠',
-                type: 'dummy',
-                summary: '황희찬 선수가 울버햄튼에서 좋은 활약을 보이고 있습니다. 프리미어리그에서 빠른 스피드와 정확한 크로스를 선보이고 있습니다.'
-            },
-            {
-                id: `dummy-5`,
-                title: '조현우, 알샤바브에서 안정적인 수비',
-                description: '조현우 선수가 알샤바브에서 안정적인 수비를 보여주고 있습니다.',
-                link: '#',
-                publishedAt: new Date(Date.now() - 8 * 60 * 60 * 1000),
-                source: '한겨레 스포츠',
-                type: 'dummy',
-                summary: '조현우 선수가 알샤바브에서 안정적인 수비를 보여주고 있습니다. 사우디 리그에서 꾸준한 클린시트를 기록하며 팀의 승리를 이끌고 있습니다.'
-            }
-        ];
-        
-        return dummyNews;
     }
 
     // 축구 관련 뉴스인지 확인
