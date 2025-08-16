@@ -563,15 +563,21 @@ function displayArticles() {
     }
     
     articlesGrid.innerHTML = articles.map(article => `
-        <div class="article-card" onclick="openArticleModal('${article.id}')">
-            <div class="article-header">
-                <h3 class="article-title">${article.title}</h3>
-                <span class="article-source">${article.source}</span>
+        <div class="news-card" onclick="openArticleModal('${article.id}')">
+            <div class="news-card-header">
+                <h3 class="news-title">${article.title}</h3>
+                <div class="news-meta">
+                    <span class="news-source">${article.source}</span>
+                    <span class="news-date">${formatDate(article.publishedAt)}</span>
+                </div>
             </div>
-            <div class="article-body">
-                <p class="article-description">${article.description}</p>
-                <div class="article-meta">
-                    <span class="article-date">${formatDate(article.publishedAt)}</span>
+            <div class="news-card-body">
+                <p class="news-summary">${article.description}</p>
+                <div class="news-actions">
+                    <a href="${article.url || '#'}" target="_blank" class="btn btn-primary" onclick="event.stopPropagation()">
+                        <i class="fas fa-external-link-alt"></i>
+                        원문 보기
+                    </a>
                 </div>
             </div>
         </div>

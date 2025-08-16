@@ -11,8 +11,8 @@ class KoreanFootballNewsCollector {
             CRAWL_SITES: [
                 {
                     name: '네이버 스포츠 축구',
-                    url: 'https://sports.news.naver.com/wfootball/index.nhn',
-                    selector: '.news_list li, .news_item, .news_list_item, .list_news li, .news_list .item, .news_list .list_item, .news_list .news_item, .news_list .news_list_item'
+                    url: 'https://sports.news.naver.com/wfootball/news/index.nhn',
+                    selector: '.news_list li, .news_item, .news_list_item, .list_news li, .news_list .item, .news_list .list_item, .news_list .news_item, .news_list .news_list_item, .news_list .list_item, .news_list .item, .news_list .news_item, .news_list .news_list_item'
                 }
             ],
             
@@ -172,9 +172,10 @@ class KoreanFootballNewsCollector {
             
             const news = [];
             
-            // 여러 선택자 시도
+            // 여러 선택자 시도 (네이버 스포츠 축구 전용)
             const selectors = [
                 site.selector,
+                // 네이버 스포츠 축구 전용 선택자들
                 '.news_list li',
                 '.news_item',
                 '.news_list_item',
@@ -184,6 +185,7 @@ class KoreanFootballNewsCollector {
                 '.news_list .list_item',
                 '.news_list .news_item',
                 '.news_list .news_list_item',
+                // 추가 네이버 선택자들
                 '.news_list .list_item',
                 '.news_list .item',
                 '.news_list .news_item',
@@ -192,10 +194,13 @@ class KoreanFootballNewsCollector {
                 '.news_list .item',
                 '.news_list .news_item',
                 '.news_list .news_list_item',
-                '.news_list .list_item',
-                '.news_list .item',
-                '.news_list .news_item',
-                '.news_list .news_list_item'
+                // 더 일반적인 선택자들
+                'li',
+                '.item',
+                '.list_item',
+                '.news_item',
+                '.article_item',
+                '.content_item'
             ];
             
             let newsElements = [];
@@ -209,6 +214,8 @@ class KoreanFootballNewsCollector {
             
             if (newsElements.length === 0) {
                 console.log(`${site.name}에서 뉴스 요소를 찾을 수 없음`);
+                console.log('사용 가능한 요소들:', doc.querySelectorAll('*').length);
+                console.log('HTML 샘플:', html.substring(0, 1000));
                 return [];
             }
             
