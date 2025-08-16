@@ -271,6 +271,9 @@ body {
     max-height: 4.8rem;
     -webkit-line-clamp: 3 !important;
     line-clamp: 3;
+    /* 긴 텍스트 처리를 위한 추가 속성 */
+    white-space: normal;
+    word-wrap: break-word;
 }
 
 .news-actions {
