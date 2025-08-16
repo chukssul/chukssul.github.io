@@ -142,6 +142,7 @@ class ChatSystem {
     loadChatHistory() {
         const chatRef = database.ref(`chats/${this.currentChatId}/messages`);
         
+        // 성능 최적화: 인덱스된 timestamp로 정렬하고 최근 50개만 로드
         chatRef.orderByChild('timestamp').limitToLast(50).once('value')
             .then((snapshot) => {
                 const messages = [];
@@ -151,6 +152,9 @@ class ChatSystem {
                         ...childSnapshot.val()
                     });
                 });
+                
+                // 시간순 정렬 (최신 메시지가 아래에 오도록)
+                messages.sort((a, b) => a.timestamp - b.timestamp);
                 
                 this.displayMessages(messages);
                 this.scrollToBottom();
@@ -194,8 +198,10 @@ class ChatSystem {
         const content = input.value.trim();
         if (!content) return;
         
-        // 입력 필드 비활성화
+        // 입력 필드 비활성화 및 로딩 상태 표시
         input.disabled = true;
+        const originalValue = input.value;
+        input.value = '전송 중...';
         
         const message = {
             content: content,
@@ -217,11 +223,20 @@ class ChatSystem {
                 
                 // 뉴스 카드에 채팅 표시 업데이트
                 this.updateNewsCardChatDisplay();
+                
+                // 성공 로그
+                console.log('메시지 전송 성공:', message.content);
             })
             .catch((error) => {
                 console.error('메시지 전송 오류:', error);
+                
+                // 입력 필드 복원
+                input.value = originalValue;
                 input.disabled = false;
-                alert('메시지 전송에 실패했습니다. 다시 시도해주세요.');
+                input.focus();
+                
+                // 사용자에게 오류 알림
+                this.showErrorMessage('메시지 전송에 실패했습니다. 다시 시도해주세요.');
             });
     }
 
@@ -374,6 +389,42 @@ class ChatSystem {
         if (messagesContainer) {
             messagesContainer.scrollTop = messagesContainer.scrollHeight;
         }
+    }
+    
+    // 오류 메시지 표시
+    showErrorMessage(message) {
+        let messagesContainer;
+        
+        if (this.currentChatId.startsWith('news_')) {
+            messagesContainer = document.getElementById('chat-messages');
+        } else if (this.currentChatId.startsWith('article_')) {
+            messagesContainer = document.getElementById('article-chat-messages');
+        }
+        
+        if (!messagesContainer) return;
+        
+        // 오류 메시지 요소 생성
+        const errorElement = document.createElement('div');
+        errorElement.className = 'chat-error-message';
+        errorElement.innerHTML = `
+            <div class="error-content">
+                <i class="fas fa-exclamation-triangle"></i>
+                <span>${message}</span>
+            </div>
+        `;
+        
+        // 메시지 컨테이너에 추가
+        messagesContainer.appendChild(errorElement);
+        
+        // 5초 후 자동 제거
+        setTimeout(() => {
+            if (errorElement.parentNode) {
+                errorElement.parentNode.removeChild(errorElement);
+            }
+        }, 5000);
+        
+        // 자동 스크롤
+        this.scrollToBottom();
     }
 
     // 채팅 종료 (모달이 닫힐 때)
