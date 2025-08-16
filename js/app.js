@@ -66,6 +66,7 @@ const articlesLoading = document.getElementById('articles-loading');
 const koreanNewsLoading = document.getElementById('korean-news-loading');
 const refreshArticlesBtn = document.getElementById('refresh-articles');
 const refreshKoreanNewsBtn = document.getElementById('refresh-korean-news');
+const refreshInternationalNewsBtn = document.getElementById('refresh-international-news');
 const matchModal = document.getElementById('match-modal');
 const matchModalBody = document.getElementById('match-modal-body');
 const articleModal = document.getElementById('article-modal');
@@ -121,6 +122,11 @@ function setupEventListeners() {
     // 한국 축구 뉴스 이벤트
     if (refreshKoreanNewsBtn) {
         refreshKoreanNewsBtn.addEventListener('click', loadKoreanNews);
+    }
+    
+    // 해외 축구 뉴스 이벤트
+    if (refreshInternationalNewsBtn) {
+        refreshInternationalNewsBtn.addEventListener('click', refreshInternationalNews);
     }
     
     if (searchBtn) {
@@ -287,6 +293,7 @@ async function refreshInternationalNews() {
     } catch (error) {
         console.error('해외 축구 뉴스 새로고침 실패:', error);
         hideLoading('international-news');
+        showError('international-news', '뉴스를 새로고침하는 중 오류가 발생했습니다.');
     }
 }
 

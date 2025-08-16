@@ -1,16 +1,16 @@
 // 해외 축구 속보 수집 시스템
-class KoreanFootballNewsCollector {
+class InternationalFootballNewsCollector {
     constructor() {
         this.config = {
-            // 네이버 스포츠 축구만 사용
+            // 네이버 스포츠 해외축구만 사용
             RSS_FEEDS: [
                 'https://sports.news.naver.com/wfootball/index.nhn?rss=1'
             ],
             
-            // 네이버 스포츠 축구만 크롤링
+            // 네이버 스포츠 해외축구만 크롤링
             CRAWL_SITES: [
                 {
-                    name: '네이버 스포츠 축구',
+                    name: '네이버 스포츠 해외축구',
                     url: 'https://sports.news.naver.com/wfootball/news/index.nhn',
                     selector: '.news_list li, .news_item, .news_list_item, .list_news li, .news_list .item, .news_list .list_item, .news_list .news_item, .news_list .news_list_item'
                 }
@@ -500,4 +500,4 @@ class KoreanFootballNewsCollector {
 }
 
 // 전역 인스턴스
-window.koreanFootballNews = new KoreanFootballNewsCollector();
+window.internationalFootballNews = new InternationalFootballNewsCollector();
