@@ -92,6 +92,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
 function initializeApp() {
     setupEventListeners();
+    
+    // 초기 로딩 메시지 표시
+    showLoading('korean-news');
+    showLoading('international-news');
+    
     loadKoreanNews();
     loadInternationalNews();
     // loadMatches(); // 향후 개발 예정
@@ -219,13 +224,18 @@ async function loadKoreanNews() {
 // 한국 축구 뉴스 새로고침
 async function refreshKoreanNews() {
     try {
+        showLoading('korean-news');
+        
         if (window.koreanFootballNews) {
             const news = await window.koreanFootballNews.collectAllNews();
             koreanNews = news;
             displayKoreanNews(news);
         }
+        
+        hideLoading('korean-news');
     } catch (error) {
         console.error('뉴스 새로고침 실패:', error);
+        hideLoading('korean-news');
     }
 }
 
@@ -262,13 +272,18 @@ async function loadInternationalNews() {
 // 해외 축구 뉴스 새로고침
 async function refreshInternationalNews() {
     try {
+        showLoading('international-news');
+        
         if (window.internationalFootballNews) {
             const news = await window.internationalFootballNews.collectAllNews();
             internationalNews = news;
             displayInternationalNews(news);
         }
+        
+        hideLoading('international-news');
     } catch (error) {
         console.error('해외 축구 뉴스 새로고침 실패:', error);
+        hideLoading('international-news');
     }
 }
 
@@ -495,7 +510,7 @@ function openInternationalNewsModal(newsId) {
 function showLoading(type) {
     const loadingElement = document.getElementById(`${type}-loading`);
     if (loadingElement) {
-        loadingElement.style.display = 'flex';
+        loadingElement.classList.remove('hidden');
     }
 }
 
@@ -503,7 +518,7 @@ function showLoading(type) {
 function hideLoading(type) {
     const loadingElement = document.getElementById(`${type}-loading`);
     if (loadingElement) {
-        loadingElement.style.display = 'none';
+        loadingElement.classList.add('hidden');
     }
 }
 

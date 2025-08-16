@@ -28,7 +28,7 @@
 
     <main class="main">
         <div class="container">
-            <!-- 한국 축구 뉴스 섹션 -->
+            <!-- 국내 축구 속보 -->
             <section id="korean-news" class="tab-content active">
                 <div class="section-header">
                     <h2>국내 축구 속보</h2>
@@ -46,11 +46,15 @@
                     </div>
                 </div>
                 
-                <div class="news-grid" id="korean-news-grid">
-                    <!-- 뉴스 카드들이 여기에 동적으로 생성됩니다 -->
+                <div class="korean-news-container">
+                    <div class="loading-message" id="korean-news-loading">
+                        <i class="fas fa-spinner fa-spin"></i>
+                        <p>속보를 가져오고 있습니다...</p>
+                    </div>
+                    <div class="news-grid" id="korean-news-grid"></div>
                 </div>
             </section>
-
+            
             <!-- 해외 축구 속보 -->
             <section id="international-news" class="tab-content">
                 <div class="section-header">
@@ -69,8 +73,12 @@
                     </div>
                 </div>
                 
-                <div class="news-grid" id="international-news-grid">
-                    <!-- 뉴스 카드들이 여기에 동적으로 생성됩니다 -->
+                <div class="international-news-container">
+                    <div class="loading-message" id="international-news-loading">
+                        <i class="fas fa-spinner fa-spin"></i>
+                        <p>속보를 가져오고 있습니다...</p>
+                    </div>
+                    <div class="news-grid" id="international-news-grid"></div>
                 </div>
             </section>
 
@@ -180,10 +188,10 @@
 
     <footer class="footer">
         <div class="container">
-            <p>축썰</p>
+            <p>국내 축구, 해외 축구 속보를 간편하게 확인할 수 있습니다.</p>
             <p class="disclaimer">
                 <small>
-                    * 뉴스 기사의 원문은 링크를 클릭하면 확인하실 수 있습니다.
+                    * 댓글도 달 수 있습니다.
                 </small>
             </p>
         </div>

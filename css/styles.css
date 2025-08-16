@@ -875,4 +875,38 @@ body {
     .news-card {
         padding: 1rem;
     }
+}
+
+/* 로딩 메시지 */
+.loading-message {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 3rem 2rem;
+    text-align: center;
+    color: #666;
+}
+
+.loading-message i {
+    font-size: 2rem;
+    color: #007bff;
+    margin-bottom: 1rem;
+}
+
+.loading-message p {
+    font-size: 1.1rem;
+    margin: 0;
+    color: #555;
+}
+
+/* 로딩 메시지 숨김 */
+.loading-message.hidden {
+    display: none;
+}
+
+/* 뉴스 컨테이너 */
+.korean-news-container,
+.international-news-container {
+    position: relative;
 } 
