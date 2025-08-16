@@ -323,6 +323,16 @@ function displayKoreanNews(newsToDisplay) {
         return;
     }
     
+    // 통계 데이터 확인 로그
+    console.log('한국 축구 뉴스 표시 - 통계 데이터:', newsToDisplay.map(news => ({
+        id: news.id,
+        title: news.title.substring(0, 30) + '...',
+        viewCount: news.viewCount,
+        likeCount: news.likeCount,
+        isLiked: news.isLiked,
+        hasChat: news.hasChat
+    })));
+    
     koreanNewsGrid.innerHTML = newsToDisplay.map(news => `
         <div class="news-card" onclick="openNewsModal('${news.id}')">
             <div class="news-card-header">
@@ -539,7 +549,15 @@ function getUserId() {
 
 // Firebase 경로를 안전하게 만드는 함수
 function sanitizeFirebasePath(path) {
-    return path.replace(/[.#$\[\]]/g, '_').replace(/-/g, '_');
+    // Firebase에서 허용되지 않는 문자만 제거
+    let safePath = path.replace(/[.#$\[\]]/g, '_');
+    
+    // 디버깅을 위한 로그
+    if (path !== safePath) {
+        console.log(`Firebase 경로 안전화: "${path}" -> "${safePath}"`);
+    }
+    
+    return safePath;
 }
 
 // 뉴스 통계 데이터 로드
@@ -567,12 +585,24 @@ async function loadNewsStats(newsArray) {
                 
                 // 채팅 존재 여부 확인
                 news.hasChat = stats.hasChat || false;
+                
+                console.log(`뉴스 ${news.id} 통계 로드:`, {
+                    viewCount: news.viewCount,
+                    likeCount: news.likeCount,
+                    isLiked: news.isLiked,
+                    hasChat: news.hasChat,
+                    safeId: safeNewsId
+                });
             } else {
                 // 기본값 설정
                 news.viewCount = 0;
                 news.likeCount = 0;
                 news.isLiked = false;
                 news.hasChat = false;
+                
+                console.log(`뉴스 ${news.id} 통계 없음, 기본값 설정:`, {
+                    safeId: safeNewsId
+                });
             }
         }
     } catch (error) {
@@ -593,6 +623,16 @@ function displayInternationalNews(newsToDisplay) {
         `;
         return;
     }
+    
+    // 통계 데이터 확인 로그
+    console.log('해외 축구 뉴스 표시 - 통계 데이터:', newsToDisplay.map(news => ({
+        id: news.id,
+        title: news.title.substring(0, 30) + '...',
+        viewCount: news.viewCount,
+        likeCount: news.likeCount,
+        isLiked: news.isLiked,
+        hasChat: news.hasChat
+    })));
     
     internationalNewsGrid.innerHTML = newsToDisplay.map(news => `
         <div class="news-card" onclick="openInternationalNewsModal('${news.id}')">
