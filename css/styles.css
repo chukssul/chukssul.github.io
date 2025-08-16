@@ -205,7 +205,7 @@ body {
     box-shadow: 0 4px 15px rgba(0,0,0,0.1);
     transition: all 0.3s ease;
     cursor: pointer;
-    min-height: 320px; /* 280px → 320px로 증가 */
+    min-height: 360px; /* 320px → 360px로 증가 */
     display: flex;
     flex-direction: column;
 }
@@ -263,18 +263,18 @@ body {
     color: #555;
     line-height: 1.6;
     margin: 0;
-    padding: 1.5rem 0; /* 0.75rem → 1.5rem으로 증가 */
+    padding: 2rem 0; /* 1.5rem → 2rem으로 증가 */
     display: -webkit-box;
     -webkit-line-clamp: 3;
     -webkit-box-orient: vertical;
     overflow: hidden;
     text-overflow: ellipsis;
     word-break: keep-all;
-    height: 6rem; /* 3줄 고정 높이: 3 * 1.6 * 1rem + 여유 공간 */
+    height: 7.2rem; /* 6rem → 7.2rem으로 증가 (3줄 + 여유 공간) */
     box-sizing: border-box;
     position: relative;
     /* 3줄 강제 제한 및 말줄임표 표시 */
-    max-height: 6rem;
+    max-height: 7.2rem;
     -webkit-line-clamp: 3 !important;
     line-clamp: 3;
     /* 긴 텍스트 처리를 위한 추가 속성 */

@@ -141,6 +141,16 @@ function setupEventListeners() {
         });
     }
     
+    // 해외 축구 뉴스 검색 이벤트
+    const internationalNewsSearch = document.getElementById('international-news-search');
+    if (internationalNewsSearch) {
+        internationalNewsSearch.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                searchInternationalNews();
+            }
+        });
+    }
+    
     // 해외 축구 기사 새로고침
     if (refreshArticlesBtn) {
         refreshArticlesBtn.addEventListener('click', loadArticles);
