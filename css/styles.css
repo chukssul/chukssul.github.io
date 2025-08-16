@@ -263,7 +263,7 @@ body {
     color: #555;
     line-height: 1.6;
     margin: 0;
-    padding: 0.75rem 0;
+    padding: 1.5rem 0; /* 0.75rem → 1.5rem으로 증가 */
     display: -webkit-box;
     -webkit-line-clamp: 3;
     -webkit-box-orient: vertical;
