@@ -174,7 +174,7 @@ class KoreanFootballNewsCollector {
                     });
                     
                     return {
-                        id: `crawl-${Date.now()}-${Math.floor(Math.random() * 1000000)}`,
+                        id: this.generateStableNewsId(item.title),
                         title: item.title,
                         description: item.subContent || item.title,
                         link: newsUrl,
@@ -280,7 +280,7 @@ class KoreanFootballNewsCollector {
                 
                 if (title && this.isFootballRelated(title)) {
                     news.push({
-                        id: `crawl-${Date.now()}-${Math.floor(Math.random() * 1000000)}`,
+                        id: this.generateStableNewsId(this.cleanTitle(title)),
                         title: this.cleanTitle(title),
                         description: this.cleanDescription(description || title),
                         link: this.makeAbsoluteUrl(link, site.url),
@@ -356,6 +356,27 @@ class KoreanFootballNewsCollector {
             .replace(/[<>]/g, '') // HTML 태그 제거
             .replace(/\s+/g, ' ') // 연속 공백 제거
             .trim();
+    }
+
+    // 뉴스 제목을 기반으로 안정적인 ID 생성
+    generateStableNewsId(title) {
+        if (!title) return `crawl-${Date.now()}-${Math.floor(Math.random() * 1000000)}`;
+        
+        // 뉴스 제목을 정규화 (공백 제거, 특수문자 제거)
+        const normalizedTitle = title
+            .replace(/[^\w\s가-힣]/g, '') // 특수문자 제거
+            .replace(/\s+/g, '_') // 공백을 언더스코어로
+            .substring(0, 50); // 길이 제한
+        
+        // 해시 생성 (간단한 방식)
+        let hash = 0;
+        for (let i = 0; i < normalizedTitle.length; i++) {
+            const char = normalizedTitle.charCodeAt(i);
+            hash = ((hash << 5) - hash) + char;
+            hash = hash & hash; // 32비트 정수로 변환
+        }
+        
+        return `crawl-${Math.abs(hash)}`;
     }
 
     // 설명 정리
