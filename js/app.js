@@ -387,7 +387,8 @@ async function toggleLike(newsId, event) {
     
     try {
         const userId = getUserId();
-        const likeRef = database.ref(`news/${newsId}/likes/${userId}`);
+        const safeNewsId = sanitizeFirebasePath(newsId);
+        const likeRef = database.ref(`news/${safeNewsId}/likes/${userId}`);
         const likeSnapshot = await likeRef.once('value');
         
         if (likeSnapshot.exists()) {
@@ -412,7 +413,8 @@ async function toggleLike(newsId, event) {
 // 좋아요 수 업데이트
 async function updateLikeCount(newsId, change) {
     try {
-        const newsRef = database.ref(`news/${newsId}`);
+        const safeNewsId = sanitizeFirebasePath(newsId);
+        const newsRef = database.ref(`news/${safeNewsId}`);
         const newsSnapshot = await newsRef.once('value');
         
         if (newsSnapshot.exists()) {
@@ -446,7 +448,8 @@ function updateLikeButtonUI(newsId, isLiked) {
 // 조회수 증가 함수
 async function incrementViewCount(newsId) {
     try {
-        const newsRef = database.ref(`news/${newsId}`);
+        const safeNewsId = sanitizeFirebasePath(newsId);
+        const newsRef = database.ref(`news/${safeNewsId}`);
         const newsSnapshot = await newsRef.once('value');
         
         if (newsSnapshot.exists()) {
@@ -475,7 +478,8 @@ async function incrementViewCount(newsId) {
 // 채팅 존재 여부 확인 및 표시
 async function checkAndDisplayChatStatus(newsId) {
     try {
-        const chatRef = database.ref(`chats/${newsId}`);
+        const safeNewsId = sanitizeFirebasePath(newsId);
+        const chatRef = database.ref(`chats/${safeNewsId}`);
         const chatSnapshot = await chatRef.once('value');
         
         if (chatSnapshot.exists()) {
@@ -484,7 +488,8 @@ async function checkAndDisplayChatStatus(newsId) {
             
             if (hasMessages) {
                 // 뉴스 데이터에 채팅 표시 플래그 추가
-                const newsRef = database.ref(`news/${newsId}`);
+                const safeNewsId = sanitizeFirebasePath(newsId);
+                const newsRef = database.ref(`news/${safeNewsId}`);
                 await newsRef.update({ hasChat: true });
                 
                 // UI에 채팅 표시 추가
@@ -510,9 +515,15 @@ function getUserId() {
     let userId = localStorage.getItem('userId');
     if (!userId) {
         userId = 'user_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+        userId = userId.replace(/[.#$\[\]]/g, '_');
         localStorage.setItem('userId', userId);
     }
     return userId;
+}
+
+// Firebase 경로를 안전하게 만드는 함수
+function sanitizeFirebasePath(path) {
+    return path.replace(/[.#$\[\]]/g, '_').replace(/-/g, '_');
 }
 
 // 뉴스 통계 데이터 로드
@@ -522,7 +533,8 @@ async function loadNewsStats(newsArray) {
         
         for (const news of newsArray) {
             // Firebase에서 뉴스 통계 데이터 가져오기
-            const newsRef = database.ref(`news/${news.id}`);
+            const safeNewsId = sanitizeFirebasePath(news.id);
+            const newsRef = database.ref(`news/${safeNewsId}`);
             const newsSnapshot = await newsRef.once('value');
             
             if (newsSnapshot.exists()) {

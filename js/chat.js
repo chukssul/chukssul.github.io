@@ -84,6 +84,11 @@ class ChatSystem {
     sanitizePath(path) {
         return path.replace(/[.#$\[\]]/g, '_').replace(/-/g, '_');
     }
+    
+    // Firebase 경로를 안전하게 만드는 함수 (내부용)
+    sanitizeFirebasePath(path) {
+        return path.replace(/[.#$\[\]]/g, '_').replace(/-/g, '_');
+    }
 
     // 뉴스 제목을 기반으로 안정적인 ID 생성
     generateStableNewsId(newsTitle) {
@@ -303,7 +308,8 @@ class ChatSystem {
             const newsId = this.currentChatId.replace('news_', '').replace('article_', '');
             
             // Firebase에 채팅 존재 플래그 설정
-            const newsRef = database.ref(`news/${newsId}`);
+            const safeNewsId = this.sanitizeFirebasePath(newsId);
+            const newsRef = database.ref(`news/${safeNewsId}`);
             newsRef.update({ hasChat: true });
             
             // UI에 채팅 표시 추가

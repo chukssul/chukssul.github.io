@@ -174,7 +174,7 @@ class KoreanFootballNewsCollector {
                     });
                     
                     return {
-                        id: `crawl-${Date.now()}-${Math.random()}`,
+                        id: `crawl-${Date.now()}-${Math.floor(Math.random() * 1000000)}`,
                         title: item.title,
                         description: item.subContent || item.title,
                         link: newsUrl,
@@ -280,7 +280,7 @@ class KoreanFootballNewsCollector {
                 
                 if (title && this.isFootballRelated(title)) {
                     news.push({
-                        id: `crawl-${Date.now()}-${Math.random()}`,
+                        id: `crawl-${Date.now()}-${Math.floor(Math.random() * 1000000)}`,
                         title: this.cleanTitle(title),
                         description: this.cleanDescription(description || title),
                         link: this.makeAbsoluteUrl(link, site.url),
