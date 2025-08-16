@@ -421,8 +421,8 @@ function openNewsModal(newsId) {
     document.getElementById('modal-news-summary').textContent = news.summary;
     document.getElementById('modal-news-link').href = news.link;
     
-    // 채팅 시작
-    startNewsChat(newsId);
+    // 채팅 시작 (뉴스 제목과 함께)
+    startNewsChat(newsId, news.title);
     
     // 모달 표시
     newsModal.style.display = 'block';
@@ -442,8 +442,8 @@ function openInternationalNewsModal(newsId) {
     document.getElementById('modal-news-summary').textContent = news.summary;
     document.getElementById('modal-news-link').href = news.link;
     
-    // 채팅 시작
-    startNewsChat(newsId);
+    // 채팅 시작 (뉴스 제목과 함께)
+    startNewsChat(newsId, news.title);
     
     // 모달 표시
     newsModal.style.display = 'block';

@@ -85,11 +85,41 @@ class ChatSystem {
         return path.replace(/[.#$\[\]]/g, '_').replace(/-/g, '_');
     }
 
+    // 뉴스 제목을 기반으로 안정적인 ID 생성
+    generateStableNewsId(newsTitle) {
+        // 뉴스 제목을 정규화 (공백 제거, 특수문자 제거)
+        const normalizedTitle = newsTitle
+            .replace(/[^\w\s가-힣]/g, '') // 특수문자 제거
+            .replace(/\s+/g, '_') // 공백을 언더스코어로
+            .substring(0, 50); // 길이 제한
+        
+        // 해시 생성 (간단한 방식)
+        let hash = 0;
+        for (let i = 0; i < normalizedTitle.length; i++) {
+            const char = normalizedTitle.charCodeAt(i);
+            hash = ((hash << 5) - hash) + char;
+            hash = hash & hash; // 32비트 정수로 변환
+        }
+        
+        return `news_${Math.abs(hash)}`;
+    }
+
     // 채팅 시작 (뉴스 또는 기사 모달이 열릴 때)
-    startChat(type, id) {
-        // Firebase 경로 규칙에 맞게 ID 정리
-        const safeId = this.sanitizePath(id);
-        this.currentChatId = `${type}_${safeId}`;
+    startChat(type, id, title = null) {
+        let chatId;
+        
+        if (type === 'news' && title) {
+            // 뉴스의 경우 제목 기반으로 안정적인 ID 생성
+            chatId = this.generateStableNewsId(title);
+        } else {
+            // 기사의 경우 기존 방식 사용
+            const safeId = this.sanitizePath(id);
+            chatId = `${type}_${safeId}`;
+        }
+        
+        this.currentChatId = chatId;
+        console.log('채팅 시작:', { type, id, title, chatId });
+        
         this.loadChatHistory();
         this.listenToNewMessages();
         
@@ -315,9 +345,9 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // 채팅 시작 함수 (외부에서 호출)
-function startNewsChat(newsId) {
+function startNewsChat(newsId, newsTitle) {
     if (chatSystem) {
-        chatSystem.startChat('news', newsId);
+        chatSystem.startChat('news', newsId, newsTitle);
     }
 }
 
