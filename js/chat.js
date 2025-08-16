@@ -209,6 +209,9 @@ class ChatSystem {
                 input.value = '';
                 input.disabled = false;
                 input.focus();
+                
+                // 뉴스 카드에 채팅 표시 업데이트
+                this.updateNewsCardChatDisplay();
             })
             .catch((error) => {
                 console.error('메시지 전송 오류:', error);
@@ -291,6 +294,47 @@ class ChatSystem {
         }
     }
 
+    // 뉴스 카드에 채팅 표시 업데이트
+    updateNewsCardChatDisplay() {
+        if (!this.currentChatId) return;
+        
+        try {
+            // 뉴스 ID 추출
+            const newsId = this.currentChatId.replace('news_', '').replace('article_', '');
+            
+            // Firebase에 채팅 존재 플래그 설정
+            const newsRef = database.ref(`news/${newsId}`);
+            newsRef.update({ hasChat: true });
+            
+            // UI에 채팅 표시 추가
+            this.addChatIndicatorToNewsCard(newsId);
+        } catch (error) {
+            console.error('뉴스 카드 채팅 표시 업데이트 중 오류:', error);
+        }
+    }
+    
+    // 뉴스 카드에 채팅 표시 추가
+    addChatIndicatorToNewsCard(newsId) {
+        // 뉴스 카드 찾기
+        const newsCard = document.querySelector(`[onclick*="${newsId}"]`);
+        if (!newsCard) return;
+        
+        // 이미 채팅 표시가 있으면 추가하지 않음
+        if (newsCard.querySelector('.chat-indicator')) return;
+        
+        // news-stats 섹션 찾기
+        const newsStats = newsCard.querySelector('.news-stats');
+        if (!newsStats) return;
+        
+        // 채팅 표시 요소 생성
+        const chatIndicator = document.createElement('div');
+        chatIndicator.className = 'chat-indicator';
+        chatIndicator.innerHTML = '<i class="fas fa-comments"></i> 채팅';
+        
+        // news-stats에 추가
+        newsStats.appendChild(chatIndicator);
+    }
+    
     // 환영 메시지 표시
     showWelcomeMessage() {
         let messagesContainer;

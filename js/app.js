@@ -209,6 +209,7 @@ async function loadKoreanNews() {
         const cachedNews = window.koreanFootballNews.getCachedNews();
         if (cachedNews.length > 0) {
             koreanNews = cachedNews;
+            await loadNewsStats(cachedNews);
             displayKoreanNews(cachedNews);
         }
         
@@ -219,6 +220,8 @@ async function loadKoreanNews() {
         // 캐시 업데이트
         window.koreanFootballNews.updateCache(news);
         
+        // 통계 데이터 로드
+        await loadNewsStats(news);
         displayKoreanNews(news);
         
         hideLoading('korean-news');
@@ -257,6 +260,7 @@ async function loadInternationalNews() {
         const cachedNews = window.internationalFootballNews.getCachedNews();
         if (cachedNews.length > 0) {
             internationalNews = cachedNews;
+            await loadNewsStats(cachedNews);
             displayInternationalNews(cachedNews);
         }
         
@@ -267,6 +271,8 @@ async function loadInternationalNews() {
         // 캐시 업데이트
         window.internationalFootballNews.updateCache(news);
         
+        // 통계 데이터 로드
+        await loadNewsStats(news);
         displayInternationalNews(news);
         
         hideLoading('international-news');
@@ -325,6 +331,19 @@ function displayKoreanNews(newsToDisplay) {
             </div>
             <div class="news-card-body">
                 <p class="news-summary">${news.summary}</p>
+                <div class="news-stats">
+                    <div class="news-stats-item">
+                        <i class="fas fa-eye"></i>
+                        <span class="view-count" data-news-id="${news.id}">${news.viewCount || 0}</span>
+                    </div>
+                    <div class="news-stats-item">
+                        <button class="like-btn ${news.isLiked ? 'liked' : ''}" onclick="toggleLike('${news.id}', event)">
+                            <i class="fas fa-heart"></i>
+                            <span class="like-count" data-news-id="${news.id}">${news.likeCount || 0}</span>
+                        </button>
+                    </div>
+                    ${news.hasChat ? '<div class="chat-indicator"><i class="fas fa-comments"></i> 채팅</div>' : ''}
+                </div>
                 <div class="news-actions">
                     <a href="${news.link}" target="_blank" class="btn btn-primary" onclick="event.stopPropagation()">
                         <i class="fas fa-external-link-alt"></i>
@@ -337,7 +356,9 @@ function displayKoreanNews(newsToDisplay) {
 }
 
 // 한국 축구 뉴스 수집 완료 후 처리
-function onKoreanNewsCollected(news) {
+async function onKoreanNewsCollected(news) {
+    // 각 뉴스에 대한 통계 데이터 로드
+    await loadNewsStats(news);
     displayKoreanNews(news);
 }
 
@@ -359,6 +380,177 @@ function searchKoreanNews() {
 }
 
 // 한국 축구 뉴스 새로고침 (중복 제거)
+
+// 좋아요 토글 함수
+async function toggleLike(newsId, event) {
+    event.stopPropagation();
+    
+    try {
+        const userId = getUserId();
+        const likeRef = database.ref(`news/${newsId}/likes/${userId}`);
+        const likeSnapshot = await likeRef.once('value');
+        
+        if (likeSnapshot.exists()) {
+            // 이미 좋아요를 눌렀다면 제거
+            await likeRef.remove();
+            await updateLikeCount(newsId, -1);
+            updateLikeButtonUI(newsId, false);
+        } else {
+            // 좋아요 추가
+            await likeRef.set({
+                timestamp: Date.now(),
+                userId: userId
+            });
+            await updateLikeCount(newsId, 1);
+            updateLikeButtonUI(newsId, true);
+        }
+    } catch (error) {
+        console.error('좋아요 처리 중 오류:', error);
+    }
+}
+
+// 좋아요 수 업데이트
+async function updateLikeCount(newsId, change) {
+    try {
+        const newsRef = database.ref(`news/${newsId}`);
+        const newsSnapshot = await newsRef.once('value');
+        
+        if (newsSnapshot.exists()) {
+            const currentCount = newsSnapshot.val().likeCount || 0;
+            const newCount = Math.max(0, currentCount + change);
+            await newsRef.update({ likeCount: newCount });
+            
+            // UI 업데이트
+            const likeCountElement = document.querySelector(`[data-news-id="${newsId}"].like-count`);
+            if (likeCountElement) {
+                likeCountElement.textContent = newCount;
+            }
+        }
+    } catch (error) {
+        console.error('좋아요 수 업데이트 중 오류:', error);
+    }
+}
+
+// 좋아요 버튼 UI 업데이트
+function updateLikeButtonUI(newsId, isLiked) {
+    const likeBtn = document.querySelector(`[onclick*="${newsId}"]`);
+    if (likeBtn) {
+        if (isLiked) {
+            likeBtn.classList.add('liked');
+        } else {
+            likeBtn.classList.remove('liked');
+        }
+    }
+}
+
+// 조회수 증가 함수
+async function incrementViewCount(newsId) {
+    try {
+        const newsRef = database.ref(`news/${newsId}`);
+        const newsSnapshot = await newsRef.once('value');
+        
+        if (newsSnapshot.exists()) {
+            const currentCount = newsSnapshot.val().viewCount || 0;
+            const newCount = currentCount + 1;
+            await newsRef.update({ viewCount: newCount });
+            
+            // UI 업데이트
+            const viewCountElement = document.querySelector(`[data-news-id="${newsId}"].view-count`);
+            if (viewCountElement) {
+                viewCountElement.textContent = newCount;
+            }
+        } else {
+            // 뉴스가 존재하지 않으면 새로 생성
+            await newsRef.set({
+                viewCount: 1,
+                likeCount: 0,
+                createdAt: Date.now()
+            });
+        }
+    } catch (error) {
+        console.error('조회수 증가 중 오류:', error);
+    }
+}
+
+// 채팅 존재 여부 확인 및 표시
+async function checkAndDisplayChatStatus(newsId) {
+    try {
+        const chatRef = database.ref(`chats/${newsId}`);
+        const chatSnapshot = await chatRef.once('value');
+        
+        if (chatSnapshot.exists()) {
+            const messages = chatSnapshot.val();
+            const hasMessages = Object.keys(messages).length > 0;
+            
+            if (hasMessages) {
+                // 뉴스 데이터에 채팅 표시 플래그 추가
+                const newsRef = database.ref(`news/${newsId}`);
+                await newsRef.update({ hasChat: true });
+                
+                // UI에 채팅 표시 추가
+                const newsCard = document.querySelector(`[onclick*="${newsId}"]`);
+                if (newsCard && !newsCard.querySelector('.chat-indicator')) {
+                    const newsStats = newsCard.querySelector('.news-stats');
+                    if (newsStats) {
+                        const chatIndicator = document.createElement('div');
+                        chatIndicator.className = 'chat-indicator';
+                        chatIndicator.innerHTML = '<i class="fas fa-comments"></i> 채팅';
+                        newsStats.appendChild(chatIndicator);
+                    }
+                }
+            }
+        }
+    } catch (error) {
+        console.error('채팅 상태 확인 중 오류:', error);
+    }
+}
+
+// 사용자 ID 생성/가져오기
+function getUserId() {
+    let userId = localStorage.getItem('userId');
+    if (!userId) {
+        userId = 'user_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+        localStorage.setItem('userId', userId);
+    }
+    return userId;
+}
+
+// 뉴스 통계 데이터 로드
+async function loadNewsStats(newsArray) {
+    try {
+        const userId = getUserId();
+        
+        for (const news of newsArray) {
+            // Firebase에서 뉴스 통계 데이터 가져오기
+            const newsRef = database.ref(`news/${news.id}`);
+            const newsSnapshot = await newsRef.once('value');
+            
+            if (newsSnapshot.exists()) {
+                const stats = newsSnapshot.val();
+                news.viewCount = stats.viewCount || 0;
+                news.likeCount = stats.likeCount || 0;
+                
+                // 사용자의 좋아요 상태 확인
+                if (stats.likes && stats.likes[userId]) {
+                    news.isLiked = true;
+                } else {
+                    news.isLiked = false;
+                }
+                
+                // 채팅 존재 여부 확인
+                news.hasChat = stats.hasChat || false;
+            } else {
+                // 기본값 설정
+                news.viewCount = 0;
+                news.likeCount = 0;
+                news.isLiked = false;
+                news.hasChat = false;
+            }
+        }
+    } catch (error) {
+        console.error('뉴스 통계 로드 중 오류:', error);
+    }
+}
 
 // 해외 축구 뉴스 표시
 function displayInternationalNews(newsToDisplay) {
@@ -388,6 +580,19 @@ function displayInternationalNews(newsToDisplay) {
             </div>
             <div class="news-card-body">
                 <p class="news-summary">${news.summary}</p>
+                <div class="news-stats">
+                    <div class="news-stats-item">
+                        <i class="fas fa-eye"></i>
+                        <span class="view-count" data-news-id="${news.id}">${news.viewCount || 0}</span>
+                    </div>
+                    <div class="news-stats-item">
+                        <button class="like-btn ${news.isLiked ? 'liked' : ''}" onclick="toggleLike('${news.id}', event)">
+                            <i class="fas fa-heart"></i>
+                            <span class="like-count" data-news-id="${news.id}">${news.likeCount || 0}</span>
+                        </button>
+                    </div>
+                    ${news.hasChat ? '<div class="chat-indicator"><i class="fas fa-comments"></i> 채팅</div>' : ''}
+                </div>
                 <div class="news-actions">
                     <a href="${news.link}" target="_blank" class="btn btn-primary" onclick="event.stopPropagation()">
                         <i class="fas fa-external-link-alt"></i>
@@ -417,9 +622,15 @@ function searchInternationalNews() {
 }
 
 // 뉴스 모달 열기
-function openNewsModal(newsId) {
+async function openNewsModal(newsId) {
     const news = koreanNews.find(n => n.id === newsId);
     if (!news || !newsModal) return;
+    
+    // 조회수 증가
+    await incrementViewCount(newsId);
+    
+    // 채팅 상태 확인 및 표시
+    await checkAndDisplayChatStatus(newsId);
     
     // 모달 내용 설정
     document.getElementById('modal-news-title').textContent = news.title;
@@ -438,9 +649,15 @@ function openNewsModal(newsId) {
 // 채팅 시스템은 chat.js에서 처리
 
 // 뉴스 모달 열기
-function openInternationalNewsModal(newsId) {
+async function openInternationalNewsModal(newsId) {
     const news = internationalNews.find(n => n.id === newsId);
     if (!news || !newsModal) return;
+    
+    // 조회수 증가
+    await incrementViewCount(newsId);
+    
+    // 채팅 상태 확인 및 표시
+    await checkAndDisplayChatStatus(newsId);
     
     // 모달 내용 설정
     document.getElementById('modal-news-title').textContent = news.title;

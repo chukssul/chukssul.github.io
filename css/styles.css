@@ -289,6 +289,88 @@ body {
     gap: 0.5rem;
 }
 
+/* 뉴스 통계 스타일 */
+.news-stats {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin: 1rem 0;
+    padding: 0.5rem 0;
+    border-top: 1px solid #eee;
+    border-bottom: 1px solid #eee;
+}
+
+.news-stats-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.9rem;
+    color: #666;
+}
+
+.news-stats-item i {
+    font-size: 1rem;
+    color: #999;
+}
+
+.view-count {
+    font-weight: 500;
+    color: #666;
+}
+
+.like-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.25rem 0.5rem;
+    border-radius: 15px;
+    transition: all 0.3s ease;
+    color: #666;
+}
+
+.like-btn:hover {
+    background-color: #f0f0f0;
+    color: #e91e63;
+}
+
+.like-btn.liked {
+    color: #e91e63;
+}
+
+.like-btn.liked i {
+    animation: heartBeat 0.3s ease-in-out;
+}
+
+@keyframes heartBeat {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.2); }
+    100% { transform: scale(1); }
+}
+
+.like-count {
+    font-weight: 500;
+    color: #666;
+}
+
+.chat-indicator {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: #e3f2fd;
+    color: #1976d2;
+    padding: 0.25rem 0.75rem;
+    border-radius: 15px;
+    font-size: 0.85rem;
+    font-weight: 500;
+}
+
+.chat-indicator i {
+    color: #1976d2;
+}
+
 .btn {
     padding: 0.5rem 1rem;
     border: none;
