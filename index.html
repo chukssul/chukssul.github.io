@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>축구 경기 일정 & 뉴스</title>
+    <title>한국 축구 뉴스 & 경기 일정</title>
     <link rel="stylesheet" href="css/styles.css">
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
@@ -13,19 +13,80 @@
         <div class="container">
             <h1 class="logo">
                 <i class="fas fa-futbol"></i>
-                축구 경기 일정 & 뉴스
+                한국 축구 뉴스 & 경기 일정
             </h1>
             <nav class="nav">
-                <button class="nav-btn active" data-tab="matches">경기 일정</button>
-                <button class="nav-btn" data-tab="articles">축구 기사</button>
+                <button class="nav-btn active" data-tab="korean-news">한국 축구 뉴스</button>
+                <button class="nav-btn" data-tab="matches">경기 일정</button>
+                <button class="nav-btn" data-tab="articles">해외 축구 기사</button>
             </nav>
         </div>
     </header>
 
     <main class="main">
         <div class="container">
+            <!-- 한국 축구 뉴스 섹션 -->
+            <section id="korean-news" class="tab-content active">
+                <div class="section-header">
+                    <h2>한국 축구 뉴스</h2>
+                    <div class="news-controls">
+                        <div class="search-box">
+                            <input type="text" id="news-search" placeholder="뉴스 검색...">
+                            <button id="search-btn">
+                                <i class="fas fa-search"></i>
+                            </button>
+                        </div>
+                        <div class="filter-controls">
+                            <select id="source-filter">
+                                <option value="">모든 소스</option>
+                                <option value="네이버 스포츠">네이버 스포츠</option>
+                                <option value="다음 스포츠">다음 스포츠</option>
+                                <option value="조선일보 스포츠">조선일보 스포츠</option>
+                                <option value="중앙일보 스포츠">중앙일보 스포츠</option>
+                                <option value="한겨레 스포츠">한겨레 스포츠</option>
+                                <option value="경향신문 스포츠">경향신문 스포츠</option>
+                                <option value="인터풋볼">인터풋볼</option>
+                                <option value="풋볼리스트">풋볼리스트</option>
+                                <option value="베스트일레븐">베스트일레븐</option>
+                                <option value="K리그">K리그</option>
+                            </select>
+                            <button class="refresh-btn" id="refresh-korean-news">
+                                <i class="fas fa-sync-alt"></i>
+                                새로고침
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="news-stats">
+                    <div class="stat-item">
+                        <i class="fas fa-newspaper"></i>
+                        <span id="total-news-count">0</span>
+                        <span>총 뉴스</span>
+                    </div>
+                    <div class="stat-item">
+                        <i class="fas fa-clock"></i>
+                        <span id="last-update">-</span>
+                        <span>마지막 업데이트</span>
+                    </div>
+                    <div class="stat-item">
+                        <i class="fas fa-rss"></i>
+                        <span id="rss-count">0</span>
+                        <span>RSS 소스</span>
+                    </div>
+                </div>
+                
+                <div class="korean-news-container">
+                    <div class="loading-spinner" id="korean-news-loading">
+                        <i class="fas fa-spinner fa-spin"></i>
+                        <p>한국 축구 뉴스를 수집하는 중...</p>
+                    </div>
+                    <div class="news-grid" id="korean-news-grid"></div>
+                </div>
+            </section>
+
             <!-- 경기 일정 섹션 -->
-            <section id="matches" class="tab-content active">
+            <section id="matches" class="tab-content">
                 <div class="section-header">
                     <h2>경기 일정</h2>
                     <div class="match-filter">
@@ -44,10 +105,10 @@
                 </div>
             </section>
 
-            <!-- 축구 기사 섹션 -->
+            <!-- 해외 축구 기사 섹션 -->
             <section id="articles" class="tab-content">
                 <div class="section-header">
-                    <h2>축구 기사</h2>
+                    <h2>해외 축구 기사</h2>
                     <button class="refresh-btn" id="refresh-articles">
                         <i class="fas fa-sync-alt"></i>
                         새로고침
@@ -64,6 +125,39 @@
             </section>
         </div>
     </main>
+
+    <!-- 뉴스 상세 모달 -->
+    <div class="modal" id="news-modal">
+        <div class="modal-content large">
+            <span class="close">&times;</span>
+            <div class="modal-body" id="news-modal-body">
+                <div class="news-content">
+                    <div class="news-header">
+                        <h3 id="modal-news-title"></h3>
+                        <div class="news-meta">
+                            <span id="modal-news-source"></span>
+                            <span id="modal-news-date"></span>
+                        </div>
+                    </div>
+                    <div class="news-summary" id="modal-news-summary"></div>
+                    <div class="news-actions">
+                        <a id="modal-news-link" href="#" target="_blank" class="btn btn-primary">
+                            <i class="fas fa-external-link-alt"></i>
+                            원문 보기
+                        </a>
+                    </div>
+                </div>
+                <div class="comments-section">
+                    <h3>댓글</h3>
+                    <div class="comment-form">
+                        <textarea id="news-comment-text" placeholder="댓글을 입력하세요..."></textarea>
+                        <button id="submit-news-comment">댓글 작성</button>
+                    </div>
+                    <div class="comments-list" id="news-comments-list"></div>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <!-- 경기 상세 모달 -->
     <div class="modal" id="match-modal">
@@ -93,13 +187,20 @@
 
     <footer class="footer">
         <div class="container">
-            <p>&copy; 2024 축구 경기 일정 & 뉴스. 모든 권리 보유.</p>
+            <p>&copy; 2024 한국 축구 뉴스 & 경기 일정. 모든 권리 보유.</p>
+            <p class="disclaimer">
+                <small>
+                    * 이 사이트는 RSS 피드와 공개 데이터를 통해 뉴스를 수집합니다. 
+                    원문은 각 언론사 사이트에서 확인하실 수 있습니다.
+                </small>
+            </p>
         </div>
     </footer>
 
     <script src="config.js"></script>
     <script src="js/real-crawler.js"></script>
     <script src="js/translator.js"></script>
+    <script src="js/korean-football-news.js"></script>
     <script src="js/app.js"></script>
 </body>
 </html> 
