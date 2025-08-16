@@ -333,12 +333,7 @@ function searchKoreanNews() {
     displayKoreanNews(filteredNews);
 }
 
-// 한국 축구 뉴스 새로고침
-function refreshKoreanNews() {
-    if (window.koreanFootballNews) {
-        window.koreanFootballNews.collectNews();
-    }
-}
+// 한국 축구 뉴스 새로고침 (중복 제거)
 
 // 해외 축구 뉴스 표시
 function displayInternationalNews(newsToDisplay) {
