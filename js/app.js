@@ -425,28 +425,40 @@ function showError(type, message) {
 function formatDate(date) {
     if (!date) return '-';
     
-    const d = new Date(date);
-    const now = new Date();
-    const diff = now - d;
-    
-    // 24시간 이내
-    if (diff < 24 * 60 * 60 * 1000) {
-        const hours = Math.floor(diff / (60 * 60 * 1000));
-        if (hours === 0) {
-            const minutes = Math.floor(diff / (60 * 1000));
-            return `${minutes}분 전`;
+    try {
+        const d = new Date(date);
+        
+        // Invalid Date 체크
+        if (isNaN(d.getTime())) {
+            return '-';
         }
-        return `${hours}시간 전`;
+        
+        const now = new Date();
+        const diff = now - d;
+        
+        // 24시간 이내
+        if (diff < 24 * 60 * 60 * 1000) {
+            const hours = Math.floor(diff / (60 * 60 * 1000));
+            if (hours === 0) {
+                const minutes = Math.floor(diff / (60 * 1000));
+                return `${minutes}분 전`;
+            }
+            return `${hours}시간 전`;
+        }
+        
+        // 7일 이내
+        if (diff < 7 * 24 * 60 * 60 * 1000) {
+            const days = Math.floor(diff / (24 * 60 * 60 * 1000));
+            return `${days}일 전`;
+        }
+        
+        // 그 외
+        return d.toLocaleDateString('ko-KR');
+        
+    } catch (error) {
+        console.error('날짜 파싱 오류:', error);
+        return '-';
     }
-    
-    // 7일 이내
-    if (diff < 7 * 24 * 60 * 60 * 1000) {
-        const days = Math.floor(diff / (24 * 60 * 60 * 1000));
-        return `${days}일 전`;
-    }
-    
-    // 그 외
-    return d.toLocaleDateString('ko-KR');
 }
 
 // 경기 데이터 로드
@@ -457,8 +469,8 @@ async function loadMatches() {
         if (window.realCrawler) {
             matches = await window.realCrawler.crawlMatches();
         } else {
-            // 폴백: 더미 데이터
-            matches = generateDummyMatches();
+            // 더미 데이터 제거 - 빈 배열 반환
+            matches = [];
         }
         
         displayMatches();
@@ -534,8 +546,8 @@ async function loadArticles() {
         if (window.realCrawler) {
             articles = await window.realCrawler.crawlArticles();
         } else {
-            // 폴백: 더미 데이터
-            articles = generateDummyArticles();
+            // 더미 데이터 제거 - 빈 배열 반환
+            articles = [];
         }
         
         displayArticles();
@@ -823,35 +835,4 @@ function getStatusText(status) {
 function getCurrentArticleId() {
     const title = document.querySelector('#article-modal h2')?.textContent;
     return articles.find(article => article.title === title)?.id;
-}
-
-// 더미 데이터 생성 (폴백용)
-function generateDummyMatches() {
-    return [
-        {
-            id: 'match-1',
-            homeTeam: '맨체스터 유나이티드',
-            awayTeam: '리버풀',
-            homeScore: 0,
-            awayScore: 0,
-            date: new Date(Date.now() + 24 * 60 * 60 * 1000),
-            status: 'scheduled',
-            venue: '올드 트래포드',
-            referee: '마이클 올리버',
-            leagueName: '프리미어 리그'
-        }
-    ];
-}
-
-function generateDummyArticles() {
-    return [
-        {
-            id: 'article-1',
-            title: '손흥민, 토트넘에서 활약',
-            description: '한국 대표팀 주장 손흥민이 토트넘에서 좋은 활약을 보이고 있습니다.',
-            source: 'BBC Sport',
-            publishedAt: new Date(),
-            content: '손흥민 선수가 토트넘에서 뛰어난 활약을 보이고 있습니다...'
-        }
-    ];
 } 
