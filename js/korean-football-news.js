@@ -4,7 +4,7 @@ class KoreanFootballNewsCollector {
         this.config = {
             // 네이버 스포츠 축구만 사용
             RSS_FEEDS: [
-                'https://sports.news.naver.com/wfootball/index.nhn?rss=1'
+                'https://sports.news.naver.com/kfootball/index.nhn?rss=1'
             ],
             
             // 네이버 스포츠 축구만 크롤링
@@ -146,7 +146,7 @@ class KoreanFootballNewsCollector {
         for (const site of this.config.CRAWL_SITES) {
             try {
                 console.log(`크롤링 중: ${site.name}`);
-                const apiUrl = 'https://sports.news.naver.com/wfootball/news/list?isphoto=N&page=1&pageSize=20';
+                const apiUrl = 'https://sports.news.naver.com/kfootball/news/list?isphoto=N&page=1&pageSize=20';
                 const response = await this.fetchWithProxy(apiUrl);
                 const json = await response.json();
     
@@ -372,19 +372,18 @@ class KoreanFootballNewsCollector {
         }
     }
 
-    // 네이버 날짜 파싱 (YYYYMMDDHHMMSS 형식)
+    // 네이버 날짜 파싱 (YYYY.MM.DD HH:MM 형식)
     parseNaverDate(dateString) {
         if (!dateString) return new Date();
 
         try {
-            const year = dateString.substring(0, 4);
-            const month = dateString.substring(4, 6);
-            const day = dateString.substring(6, 8);
-            const hour = dateString.substring(8, 10);
-            const minute = dateString.substring(10, 12);
-            const second = dateString.substring(12, 14);
-
-            return new Date(`${year}-${month}-${day}T${hour}:${minute}:${second}`);
+            // '2025.08.16 10:12' 형식 파싱
+            const [datePart, timePart] = dateString.split(' ');
+            const [year, month, day] = datePart.split('.').map(num => parseInt(num));
+            const [hour, minute] = timePart.split(':').map(num => parseInt(num));
+            
+            // 월은 0부터 시작하므로 -1
+            return new Date(year, month - 1, day, hour, minute);
         } catch (error) {
             console.error(`네이버 날짜 파싱 실패: ${dateString}`, error);
             return new Date();
