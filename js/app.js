@@ -83,10 +83,6 @@ const newsCommentsList = document.getElementById('news-comments-list');
 // 한국 축구 뉴스 관련 요소들
 const newsSearch = document.getElementById('news-search');
 const searchBtn = document.getElementById('search-btn');
-const sourceFilter = document.getElementById('source-filter');
-const totalNewsCount = document.getElementById('total-news-count');
-const lastUpdate = document.getElementById('last-update');
-const rssCount = document.getElementById('rss-count');
 
 // 초기화
 document.addEventListener('DOMContentLoaded', function() {
@@ -138,10 +134,6 @@ function setupEventListeners() {
         });
     }
     
-    if (sourceFilter) {
-        sourceFilter.addEventListener('change', filterKoreanNews);
-    }
-
     // 해외 축구 기사 새로고침
     if (refreshArticlesBtn) {
         refreshArticlesBtn.addEventListener('click', loadArticles);
@@ -202,7 +194,6 @@ async function loadKoreanNews() {
         if (cachedNews.length > 0) {
             koreanNews = cachedNews;
             displayKoreanNews();
-            updateNewsStats();
         }
         
         // 새로운 뉴스 수집
@@ -213,7 +204,6 @@ async function loadKoreanNews() {
         window.koreanFootballNews.updateCache(news);
         
         displayKoreanNews();
-        updateNewsStats();
         
         hideLoading('korean-news');
         
@@ -224,15 +214,22 @@ async function loadKoreanNews() {
     }
 }
 
+// 한국 축구 뉴스 새로고침
+function refreshKoreanNews() {
+    if (window.koreanFootballNews) {
+        window.koreanFootballNews.collectNews();
+    }
+}
+
 // 한국 축구 뉴스 표시
-function displayKoreanNews(newsToDisplay = koreanNews) {
-    if (!koreanNewsGrid) return;
+function displayKoreanNews(newsToDisplay) {
+    const koreanNewsGrid = document.getElementById('korean-news-grid');
     
-    if (newsToDisplay.length === 0) {
+    if (!newsToDisplay || newsToDisplay.length === 0) {
         koreanNewsGrid.innerHTML = `
             <div class="no-data">
-                <i class="fas fa-newspaper"></i>
-                <p>표시할 뉴스가 없습니다.</p>
+                <i class="fas fa-search"></i>
+                <p>검색 결과가 없습니다.</p>
             </div>
         `;
         return;
@@ -263,48 +260,33 @@ function displayKoreanNews(newsToDisplay = koreanNews) {
     `).join('');
 }
 
-// 뉴스 검색
+// 한국 축구 뉴스 수집 완료 후 처리
+function onKoreanNewsCollected(news) {
+    displayKoreanNews(news);
+}
+
+// 한국 축구 뉴스 검색
 function searchKoreanNews() {
-    const keyword = newsSearch.value.trim();
-    let filteredNews = koreanNews;
+    const searchTerm = document.getElementById('korean-news-search').value.toLowerCase();
+    const newsGrid = document.getElementById('korean-news-grid');
     
-    if (keyword) {
-        filteredNews = window.koreanFootballNews.searchNews(koreanNews, keyword);
+    if (!window.koreanFootballNews || !window.koreanFootballNews.news) {
+        return;
     }
+    
+    const filteredNews = window.koreanFootballNews.news.filter(news => 
+        news.title.toLowerCase().includes(searchTerm) ||
+        news.description.toLowerCase().includes(searchTerm) ||
+        news.source.toLowerCase().includes(searchTerm)
+    );
     
     displayKoreanNews(filteredNews);
 }
 
-// 소스별 필터링
-function filterKoreanNews() {
-    const selectedSource = sourceFilter.value;
-    let filteredNews = koreanNews;
-    
-    if (selectedSource) {
-        filteredNews = window.koreanFootballNews.filterBySource(koreanNews, selectedSource);
-    }
-    
-    displayKoreanNews(filteredNews);
-}
-
-// 뉴스 통계 업데이트
-function updateNewsStats() {
-    if (totalNewsCount) {
-        totalNewsCount.textContent = koreanNews.length;
-    }
-    
-    if (lastUpdate) {
-        const lastUpdateTime = window.koreanFootballNews.getLastUpdate();
-        if (lastUpdateTime) {
-            lastUpdate.textContent = formatDate(lastUpdateTime);
-        } else {
-            lastUpdate.textContent = '-';
-        }
-    }
-    
-    if (rssCount) {
-        const rssNews = koreanNews.filter(news => news.type === 'rss');
-        rssCount.textContent = rssNews.length;
+// 한국 축구 뉴스 새로고침
+function refreshKoreanNews() {
+    if (window.koreanFootballNews) {
+        window.koreanFootballNews.collectNews();
     }
 }
 
