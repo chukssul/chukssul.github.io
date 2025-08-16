@@ -267,6 +267,10 @@ body {
     height: 4.8rem; /* 3줄 고정 높이: 3 * 1.6 * 1rem */
     box-sizing: border-box;
     position: relative;
+    /* 3줄 강제 제한 및 말줄임표 표시 */
+    max-height: 4.8rem;
+    -webkit-line-clamp: 3 !important;
+    line-clamp: 3;
 }
 
 .news-actions {
@@ -342,6 +346,16 @@ body {
 .news-actions {
     display: flex;
     gap: 1rem;
+}
+
+.news-reporter {
+    color: #666;
+    font-size: 0.85rem;
+    font-weight: 500;
+    margin-right: 0.5rem;
+    background-color: #f0f0f0;
+    padding: 0.2rem 0.5rem;
+    border-radius: 0.25rem;
 }
 
 /* 경기 필터 */

@@ -156,13 +156,19 @@ class KoreanFootballNewsCollector {
                     // 네이버 뉴스 URL 생성: https://sports.news.naver.com/news?oid=421&aid=0008431018
                     const newsUrl = `https://sports.news.naver.com/news?oid=${item.oid}&aid=${item.aid}`;
                     
+                    // 기자 이름 추출 (subContent에서 "기자" 패턴 찾기)
+                    const reporterMatch = item.subContent?.match(/([가-힣]+)\s*기자/) || 
+                                        item.title?.match(/([가-힣]+)\s*기자/);
+                    const reporter = reporterMatch ? reporterMatch[1] : null;
+                    
                     console.log('네이버 뉴스 아이템:', {
                         title: item.title,
                         datetime: item.datetime,
                         parsedDate: this.parseNaverDate(item.datetime),
                         oid: item.oid,
                         aid: item.aid,
-                        generatedUrl: newsUrl
+                        generatedUrl: newsUrl,
+                        reporter: reporter
                     });
                     
                     return {
@@ -172,6 +178,7 @@ class KoreanFootballNewsCollector {
                         link: newsUrl,
                         publishedAt: this.parseNaverDate(item.datetime),
                         source: item.officeName || site.name,
+                        reporter: reporter,
                         type: 'crawl',
                         summary: this.generateSummary(item.subContent || item.title)
                     };
