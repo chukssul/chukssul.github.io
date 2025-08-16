@@ -250,10 +250,16 @@ function displayKoreanNews(newsToDisplay = koreanNews) {
             <div class="news-card-body">
                 <p class="news-summary">${news.summary}</p>
                 <div class="news-actions">
-                    <a href="${news.link}" target="_blank" class="btn btn-primary" onclick="event.stopPropagation()">
-                        <i class="fas fa-external-link-alt"></i>
-                        원문 보기
-                    </a>
+                    ${news.link !== '#' ? 
+                        `<a href="${news.link}" target="_blank" class="btn btn-primary" onclick="event.stopPropagation()">
+                            <i class="fas fa-external-link-alt"></i>
+                            원문 보기
+                        </a>` : 
+                        `<span class="btn btn-secondary">
+                            <i class="fas fa-info-circle"></i>
+                            더미 뉴스
+                        </span>`
+                    }
                 </div>
             </div>
         </div>
